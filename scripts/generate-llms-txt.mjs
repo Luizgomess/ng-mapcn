@@ -10,8 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-// Docs site is not deployed yet — point at the repo. Swap this when it ships.
-const SITE_URL = 'https://github.com/juanvieiraprado99/ng-mapcn';
+const SITE_URL = 'https://ng-mapcn.vercel.app';
 const REPO_URL = 'https://github.com/juanvieiraprado99/ng-mapcn';
 
 const pkg = JSON.parse(
@@ -113,6 +112,20 @@ const componentList = api.sections
   .map((s) => `- **${s.title}** (\`${s.selector}\`): ${s.description}`)
   .join('\n');
 
+// The docs pages group several components (markers page covers marker + content
+// + popup + tooltip + label), so this list is not 1:1 with the API sections.
+const DOCS_COMPONENT_PAGES = [
+  { label: 'Map', slug: 'map' },
+  { label: 'Controls', slug: 'controls' },
+  { label: 'Markers', slug: 'markers' },
+  { label: 'Popups', slug: 'popups' },
+  { label: 'Routes', slug: 'routes' },
+  { label: 'Arcs', slug: 'arcs' },
+  { label: 'GeoJSON', slug: 'geojson' },
+  { label: 'Clusters', slug: 'clusters' },
+  { label: 'Advanced', slug: 'advanced' },
+];
+
 // ── llms.txt ─────────────────────────────────────────────────────────────────
 
 const llms = `# ng-mapcn
@@ -123,12 +136,18 @@ Version: ${pkg.version} · License: ${pkg.license ?? 'MIT'} · npm: https://www.
 
 ## Overview
 
+- [Home](${SITE_URL}/): live examples — trails, arcs, fly-to, delivery, analytics, EV charging.
+- [Documentation](${SITE_URL}/docs): introduction, features and supported basemaps.
+- [Installation](${SITE_URL}/docs/installation): \`ng add\` (copy-paste) or npm package.
+- [Map Styles](${SITE_URL}/docs/basemaps): a working example per provider (Carto, OpenFreeMap, OpenStreetMap, MapTiler, Stadia).
+- [API Reference](${SITE_URL}/docs/api-reference): every component with inputs and outputs.
+- [Credits](${SITE_URL}/credits): mapcn, Zard UI, MapLibre, Carto.
 - [Repository](${REPO_URL}): source, issues, releases.
-- [Documentation](${SITE_URL}#readme): installation, theming, components.
-- [API Reference](${SITE_URL}#components): every component with inputs and outputs.
-- [llms-full.txt](/llms-full.txt): the complete API in one file, for agents.
+- [llms-full.txt](${SITE_URL}/llms-full.txt): the complete API in one file, for agents.
 
 ## Components
+
+Docs pages: ${DOCS_COMPONENT_PAGES.map((p) => `[${p.label}](${SITE_URL}/docs/components/${p.slug})`).join(' · ')}
 
 ${componentList}
 
@@ -178,7 +197,7 @@ const llmsFull = `# ng-mapcn — full reference
 
 ${INTRO}
 
-Version: ${pkg.version} · License: ${pkg.license ?? 'MIT'} · Repository: ${REPO_URL}
+Version: ${pkg.version} · License: ${pkg.license ?? 'MIT'} · Docs: ${SITE_URL} · Repository: ${REPO_URL}
 
 ${INSTALLATION}
 

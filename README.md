@@ -128,7 +128,7 @@ Precedence: `[styles]` → `[blank]` → `provideMapStyles()` → Carto default.
 | MapTiler | `https://api.maptiler.com/maps/{streets-v4\|streets-v4-dark\|dataviz-v4}/style.json?key=KEY` | yes |
 | Stadia Maps | `https://tiles.stadiamaps.com/styles/{alidade_smooth\|alidade_smooth_dark}.json?api_key=KEY` | keyless on `localhost` |
 
-Live examples for each: [ng-mapcn demo → Map Styles](https://github.com/juanvieiraprado99/ng-mapcn).
+Live examples for each: [ng-mapcn demo → Map Styles](https://ng-mapcn.vercel.app/docs/basemaps).
 
 ## Demo
 
@@ -141,7 +141,7 @@ Examples: basic, markers, routes, controls, dark theme, custom style, globe fly-
 
 ## For LLMs
 
-The docs site serves [`/llms.txt`](projects/demo/public/llms.txt) (index) and [`/llms-full.txt`](projects/demo/public/llms-full.txt) (every component, input, output and default in one file), following the [llmstxt.org](https://llmstxt.org) convention. Both are generated from the API reference data — run `npm run generate:llms` after changing the API.
+The docs site serves [`llms.txt`](https://ng-mapcn.vercel.app/llms.txt) (index) and [`llms-full.txt`](https://ng-mapcn.vercel.app/llms-full.txt) (every component, input, output and default in one file), following the [llmstxt.org](https://llmstxt.org) convention. Both are generated from the API reference data — run `npm run generate:llms` after changing the API.
 
 ## Credits
 

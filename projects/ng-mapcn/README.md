@@ -172,7 +172,7 @@ Examples: basic, markers, routes, controls, dark theme, custom style, globe fly-
 
 ## For LLMs
 
-The docs site serves `/llms.txt` (index) and `/llms-full.txt` (every component, input, output and default in one file), following the [llmstxt.org](https://llmstxt.org) convention — point your coding agent at either instead of scraping the docs.
+The docs site serves [`llms.txt`](https://ng-mapcn.vercel.app/llms.txt) (index) and [`llms-full.txt`](https://ng-mapcn.vercel.app/llms-full.txt) (every component, input, output and default in one file), following the [llmstxt.org](https://llmstxt.org) convention — point your coding agent at either instead of scraping the docs.
 
 ## Credits
 

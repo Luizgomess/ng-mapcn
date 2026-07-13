@@ -32,11 +32,11 @@ const FILES: LlmsFile[] = [
 ];
 
 const USAGE_CODE = `# Point your agent straight at the file
-curl https://<this-site>/llms.txt
+curl https://ng-mapcn.vercel.app/llms.txt
 
 # Or paste it into the chat — llms-full.txt is the one that
 # contains every input, output and default.
-curl https://<this-site>/llms-full.txt`;
+curl https://ng-mapcn.vercel.app/llms-full.txt`;
 
 @Component({
   selector: 'app-llms-txt',
