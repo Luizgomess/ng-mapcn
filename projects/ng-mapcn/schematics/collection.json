@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../node_modules/@angular-devkit/schematics/collection-schema.json",
+  "schematics": {
+    "ng-add": {
+      "description": "Installs maplibre-gl, registers its CSS and copies the ng-mapcn map components into your project (shadcn-style copy-paste).",
+      "factory": "./ng-add/index#ngAdd",
+      "schema": "./ng-add/schema.json"
+    },
+    "map": {
+      "description": "Copies the ng-mapcn map component sources into your project.",
+      "factory": "./map/index#map",
+      "schema": "./map/schema.json"
+    }
+  }
+}

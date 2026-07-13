@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "ng-mapcn-map",
+  "title": "ng-mapcn map generator schema",
+  "type": "object",
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Directory (relative to the workspace root) where the map components are copied.",
+      "default": "src/app/components/ui/map"
+    }
+  },
+  "required": []
+}

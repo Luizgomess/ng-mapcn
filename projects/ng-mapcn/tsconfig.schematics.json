@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "es2022",
+    "lib": ["es2022"],
+    "declaration": false,
+    "sourceMap": false,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "../../dist/ng-mapcn/schematics",
+    "rootDir": "./schematics"
+  },
+  "include": ["schematics/**/*.ts"],
+  "exclude": ["schematics/map/files/**"]
+}
