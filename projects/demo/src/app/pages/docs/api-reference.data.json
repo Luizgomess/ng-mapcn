@@ -1,0 +1,212 @@
+{
+  "anatomyCode": "<ng-map [center]=\"[-74.006, 40.7128]\" [zoom]=\"11\">\n  <ng-map-controls />\n\n  <ng-map-marker [longitude]=\"-74.006\" [latitude]=\"40.7128\">\n    <ng-marker-content>\n      <div class=\"size-4 rounded-full bg-blue-500\"></div>\n      <ng-marker-label position=\"top\">New York</ng-marker-label>\n    </ng-marker-content>\n    <ng-marker-tooltip>Hover content</ng-marker-tooltip>\n    <ng-marker-popup>Click content</ng-marker-popup>\n  </ng-map-marker>\n\n  <ng-map-popup [longitude]=\"-74\" [latitude]=\"40.7\">Standalone popup</ng-map-popup>\n  <ng-map-route [coordinates]=\"coordinates\" />\n  <ng-map-arc [data]=\"arcs\" />\n  <ng-map-geojson [data]=\"geojson\" />\n  <ng-map-cluster-layer [data]=\"points\" />\n</ng-map>",
+  "provideStylesCode": "import { inject } from '@angular/core';\nimport { provideMapStyles } from 'ng-mapcn';\n\nexport const appConfig: ApplicationConfig = {\n  providers: [\n    // Static config...\n    provideMapStyles({\n      light: 'https://tiles.openfreemap.org/styles/positron',\n      dark: 'https://tiles.openfreemap.org/styles/dark',\n    }),\n\n    // ...or a signal, so the basemap can be switched at runtime\n    provideMapStyles(() => inject(BasemapService).styles),\n  ],\n};",
+  "provideStylesRows": [
+    { "name": "MapStylesConfig", "type": "{ light?: string | StyleSpecification; dark?: string | StyleSpecification }", "default": "", "description": "Per-theme basemap. A theme left undefined falls back to the Carto default for that theme." },
+    { "name": "provideMapStyles(source)", "type": "MapStylesConfig | Signal<MapStylesConfig | undefined> | (() => Signal<MapStylesConfig | undefined>)", "default": "", "description": "Provider for the app-wide basemap. The factory form runs in an injection context, so it can inject() a service holding the signal." },
+    { "name": "MAP_DEFAULT_STYLES", "type": "InjectionToken<Signal<MapStylesConfig | undefined>>", "default": "", "description": "The token itself, if you want to provide it by hand." }
+  ],
+  "contextRows": [
+    { "name": "map()", "type": "Signal<Map | null>", "default": "", "description": "The raw maplibre-gl Map instance, or null before init." },
+    { "name": "isLoaded()", "type": "Signal<boolean>", "default": "", "description": "True when the style is loaded and layers can be added. Gates every source/layer operation." },
+    { "name": "resolvedTheme()", "type": "Signal<'light' | 'dark'>", "default": "", "description": "Theme currently applied to the map." }
+  ],
+  "sections": [
+    {
+      "id": "map",
+      "title": "Map",
+      "selector": "ng-map",
+      "description": "The root container component that initializes MapLibre GL and provides context to child components. Automatically handles theme switching between light and dark modes.",
+      "inputs": [
+        { "name": "center", "type": "[number, number]", "default": "[0, 0]", "description": "Initial center coordinates as [longitude, latitude]." },
+        { "name": "zoom", "type": "number", "default": "2", "description": "Initial zoom level of the map." },
+        { "name": "styles", "type": "MapStylesConfig", "default": "CARTO", "description": "Custom style URLs or style objects for light and dark themes." },
+        { "name": "blank", "type": "boolean", "default": "false", "description": "Swaps the basemap for a transparent, tile-less canvas. Add your own layers on top." },
+        { "name": "projection", "type": "ProjectionSpecification", "default": "", "description": "Map projection, e.g. { type: 'globe' }." },
+        { "name": "theme", "type": "'light' | 'dark' | 'auto'", "default": "'auto'", "description": "Force a theme, or 'auto' to follow the dark/light class on <html>." },
+        { "name": "loading", "type": "boolean", "default": "false", "description": "Shows the loading overlay." },
+        { "name": "viewport", "type": "Partial<MapViewport>", "default": "", "description": "Controlled viewport ({ center, zoom, bearing, pitch }). Pair with viewportChange." },
+        { "name": "options", "type": "Omit<MapOptions, 'container' | 'style'>", "default": "", "description": "Extra MapLibre MapOptions (scrollZoom, dragRotate, …) passed to the map constructor." }
+      ],
+      "outputs": [
+        { "name": "viewportChange", "type": "MapViewport", "default": "", "description": "Emits on every viewport change (move, zoom, rotate, pitch)." },
+        { "name": "mapReady", "type": "Map", "default": "", "description": "Emits the raw maplibre-gl Map instance once loaded." },
+        { "name": "mapClick", "type": "MapMouseEvent", "default": "", "description": "Emits when the map is clicked." },
+        { "name": "mapError", "type": "Error", "default": "", "description": "Emits when the map fails to initialize or load." }
+      ]
+    },
+    {
+      "id": "mapcontrols",
+      "title": "MapControls",
+      "selector": "ng-map-controls",
+      "description": "Renders map control buttons: zoom, compass, locate, and fullscreen. Must be used inside ng-map.",
+      "inputs": [
+        { "name": "position", "type": "'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'", "default": "'bottom-right'", "description": "Corner of the map to place the controls in." },
+        { "name": "showZoom", "type": "boolean", "default": "true", "description": "Show zoom in/out buttons." },
+        { "name": "showCompass", "type": "boolean", "default": "false", "description": "Show compass button (resets bearing)." },
+        { "name": "showLocate", "type": "boolean", "default": "false", "description": "Show geolocate button." },
+        { "name": "showFullscreen", "type": "boolean", "default": "false", "description": "Show fullscreen toggle button." }
+      ],
+      "outputs": [
+        { "name": "locateChange", "type": "{ longitude: number; latitude: number }", "default": "", "description": "Emits the user position after a successful locate." }
+      ]
+    },
+    {
+      "id": "mapmarker",
+      "title": "MapMarker",
+      "selector": "ng-map-marker",
+      "description": "A container for marker-related components. Provides context for its children and handles marker positioning.",
+      "inputs": [
+        { "name": "longitude", "type": "number", "default": "required", "description": "Longitude coordinate of the marker." },
+        { "name": "latitude", "type": "number", "default": "required", "description": "Latitude coordinate of the marker." },
+        { "name": "draggable", "type": "boolean", "default": "false", "description": "Allows the marker to be dragged." },
+        { "name": "offset", "type": "PointLike", "default": "", "description": "Pixel offset applied to the marker element." },
+        { "name": "rotation", "type": "number", "default": "0", "description": "Rotation of the marker in degrees." },
+        { "name": "anchor", "type": "PositionAnchor", "default": "", "description": "Part of the marker element positioned at the coordinates." },
+        { "name": "rotationAlignment", "type": "'map' | 'viewport' | 'auto'", "default": "'auto'", "description": "How the marker rotates with the map." },
+        { "name": "pitchAlignment", "type": "'map' | 'viewport' | 'auto'", "default": "'auto'", "description": "How the marker tilts with the map pitch." }
+      ],
+      "outputs": [
+        { "name": "markerClick", "type": "MouseEvent", "default": "", "description": "Emits when the marker is clicked." },
+        { "name": "markerMouseEnter", "type": "MouseEvent", "default": "", "description": "Emits when the pointer enters the marker." },
+        { "name": "markerMouseLeave", "type": "MouseEvent", "default": "", "description": "Emits when the pointer leaves the marker." },
+        { "name": "dragStart", "type": "{ lng: number; lat: number }", "default": "", "description": "Emits when dragging starts." },
+        { "name": "drag", "type": "{ lng: number; lat: number }", "default": "", "description": "Emits continuously while dragging." },
+        { "name": "dragEnd", "type": "{ lng: number; lat: number }", "default": "", "description": "Emits the final position after dragging." }
+      ]
+    },
+    {
+      "id": "markercontent",
+      "title": "MarkerContent",
+      "selector": "ng-marker-content",
+      "description": "Renders the visual content of a marker via content projection. If left empty, a default blue dot is rendered. Must be used inside ng-map-marker.",
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "id": "markerlabel",
+      "title": "MarkerLabel",
+      "selector": "ng-marker-label",
+      "description": "An always-visible text label above or below the marker. Must be used inside ng-marker-content.",
+      "inputs": [
+        { "name": "position", "type": "'top' | 'bottom'", "default": "'top'", "description": "Side of the marker the label appears on." }
+      ],
+      "outputs": []
+    },
+    {
+      "id": "markerpopup",
+      "title": "MarkerPopup",
+      "selector": "ng-marker-popup",
+      "description": "A popup attached to the marker that opens on click. Must be used inside ng-map-marker.",
+      "inputs": [],
+      "outputs": [
+        { "name": "popupClose", "type": "void", "default": "", "description": "Emits when the popup closes." }
+      ]
+    },
+    {
+      "id": "markertooltip",
+      "title": "MarkerTooltip",
+      "selector": "ng-marker-tooltip",
+      "description": "A tooltip that appears on marker hover. Must be used inside ng-map-marker.",
+      "inputs": [
+        { "name": "offset", "type": "Offset", "default": "16", "description": "Pixel distance between the marker and the tooltip." },
+        { "name": "anchor", "type": "PositionAnchor", "default": "", "description": "Which side of the coordinates the tooltip anchors to." }
+      ],
+      "outputs": []
+    },
+    {
+      "id": "mappopup",
+      "title": "MapPopup",
+      "selector": "ng-map-popup",
+      "description": "A standalone popup component that can be placed anywhere on the map without a marker. Must be used inside ng-map.",
+      "inputs": [
+        { "name": "longitude", "type": "number", "default": "required", "description": "Longitude coordinate of the popup." },
+        { "name": "latitude", "type": "number", "default": "required", "description": "Latitude coordinate of the popup." },
+        { "name": "closeButton", "type": "boolean", "default": "false", "description": "Shows a close button in the popup." },
+        { "name": "offset", "type": "Offset", "default": "16", "description": "Pixel offset of the popup." },
+        { "name": "maxWidth", "type": "string", "default": "'none'", "description": "CSS max-width of the popup container." }
+      ],
+      "outputs": [
+        { "name": "popupClose", "type": "void", "default": "", "description": "Emits when the popup closes." }
+      ]
+    },
+    {
+      "id": "maproute",
+      "title": "MapRoute",
+      "selector": "ng-map-route",
+      "description": "Renders a line/route from the given coordinates. Must be used inside ng-map. Supports click and hover interactions.",
+      "inputs": [
+        { "name": "coordinates", "type": "[number, number][]", "default": "required", "description": "Array of [longitude, latitude] points forming the line." },
+        { "name": "id", "type": "string", "default": "auto", "description": "Optional stable id for the underlying source/layer." },
+        { "name": "color", "type": "string", "default": "'#4285F4'", "description": "Line color." },
+        { "name": "width", "type": "number", "default": "3", "description": "Line width in pixels." },
+        { "name": "opacity", "type": "number", "default": "0.8", "description": "Line opacity." },
+        { "name": "dashArray", "type": "number[]", "default": "", "description": "Dash pattern, e.g. [2, 2]." },
+        { "name": "interactive", "type": "boolean", "default": "true", "description": "Enables pointer events on the line." }
+      ],
+      "outputs": [
+        { "name": "routeClick", "type": "MapMouseEvent", "default": "", "description": "Emits when the route is clicked." }
+      ]
+    },
+    {
+      "id": "maparc",
+      "title": "MapArc",
+      "selector": "ng-map-arc",
+      "description": "Renders curved lines between coordinate pairs using quadratic Bézier interpolation, with longitude unwrapping across the antimeridian. Must be used inside ng-map.",
+      "inputs": [
+        { "name": "data", "type": "MapArcDatum[]", "default": "required", "description": "Arcs to draw: { id, from: [lng, lat], to: [lng, lat] }. Extra properties are exposed to paint expressions." },
+        { "name": "id", "type": "string", "default": "auto", "description": "Optional stable id for the underlying source/layer." },
+        { "name": "curvature", "type": "number", "default": "0.2", "description": "How much the arc bends." },
+        { "name": "samples", "type": "number", "default": "64", "description": "Number of interpolation points per arc." },
+        { "name": "paint", "type": "LineLayerSpecification[\"paint\"]", "default": "", "description": "MapLibre line paint properties." },
+        { "name": "layout", "type": "LineLayerSpecification[\"layout\"]", "default": "", "description": "MapLibre line layout properties." },
+        { "name": "hoverPaint", "type": "LineLayerSpecification[\"paint\"]", "default": "", "description": "Paint overrides applied to the hovered arc via feature-state." },
+        { "name": "interactive", "type": "boolean", "default": "true", "description": "Enables pointer events (adds an invisible hit layer)." },
+        { "name": "beforeId", "type": "string", "default": "", "description": "Insert the layer before this layer id." }
+      ],
+      "outputs": [
+        { "name": "arcClick", "type": "MapArcEvent", "default": "", "description": "Emits { arc, longitude, latitude, originalEvent } when an arc is clicked." },
+        { "name": "arcHover", "type": "MapArcEvent | null", "default": "", "description": "Emits on hover; null when the pointer leaves." }
+      ]
+    },
+    {
+      "id": "mapgeojson",
+      "title": "MapGeoJSON",
+      "selector": "ng-map-geojson",
+      "description": "Renders GeoJSON polygons and lines with theme-aware monochrome defaults and declarative feature-state hover. Accepts a URL or an inline GeoJSON object. Must be used inside ng-map.",
+      "inputs": [
+        { "name": "data", "type": "MapGeoJSONData", "default": "required", "description": "GeoJSON object or URL string." },
+        { "name": "id", "type": "string", "default": "auto", "description": "Optional stable id for the underlying source/layer." },
+        { "name": "promoteId", "type": "string", "default": "", "description": "Feature property used as feature id — required for hover feature-state." },
+        { "name": "fillPaint", "type": "FillLayerSpecification[\"paint\"]", "default": "theme mono", "description": "Fill paint properties." },
+        { "name": "linePaint", "type": "LineLayerSpecification[\"paint\"]", "default": "theme mono", "description": "Outline paint properties." },
+        { "name": "fillHoverPaint", "type": "FillLayerSpecification[\"paint\"]", "default": "", "description": "Fill paint overrides applied to the hovered feature." },
+        { "name": "interactive", "type": "boolean", "default": "false", "description": "Enables pointer events and hover tracking." },
+        { "name": "beforeId", "type": "string", "default": "", "description": "Insert the layers before this layer id." }
+      ],
+      "outputs": [
+        { "name": "featureClick", "type": "MapGeoJSONEvent", "default": "", "description": "Emits { feature, longitude, latitude, originalEvent } on click." },
+        { "name": "featureHover", "type": "MapGeoJSONEvent | null", "default": "", "description": "Emits on hover; null when the pointer leaves." }
+      ]
+    },
+    {
+      "id": "mapclusterlayer",
+      "title": "MapClusterLayer",
+      "selector": "ng-map-cluster-layer",
+      "description": "Renders clustered points with MapLibre GL native clustering. Automatically styles cluster circles by point count, zooms in on cluster click. Must be used inside ng-map.",
+      "inputs": [
+        { "name": "data", "type": "MapGeoJSONData", "default": "required", "description": "GeoJSON points (object or URL string)." },
+        { "name": "clusterMaxZoom", "type": "number", "default": "14", "description": "Max zoom at which points are clustered." },
+        { "name": "clusterRadius", "type": "number", "default": "50", "description": "Cluster radius in pixels." },
+        { "name": "clusterColors", "type": "[string, string, string]", "default": "['#22c55e', '#eab308', '#ef4444']", "description": "Circle colors for small/medium/large clusters." },
+        { "name": "clusterThresholds", "type": "[number, number]", "default": "[100, 750]", "description": "Point-count thresholds between color tiers." },
+        { "name": "pointColor", "type": "string", "default": "'#3b82f6'", "description": "Color of unclustered points." },
+        { "name": "zoomOnClusterClick", "type": "boolean", "default": "true", "description": "Zooms into a cluster when it is clicked." }
+      ],
+      "outputs": [
+        { "name": "pointClick", "type": "ClusterPointClickEvent", "default": "", "description": "Emits { feature, coordinates } when an unclustered point is clicked." },
+        { "name": "clusterClick", "type": "ClusterClickEvent", "default": "", "description": "Emits { clusterId, coordinates, pointCount } when a cluster is clicked." }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+# ng-mapcn
+
+> Angular port of [mapcn](https://www.mapcn.dev) — composable MapLibre GL v5 map components in the spirit of shadcn/ui. Standalone, signals-first, OnPush, SSR-safe, theme-aware. Carto basemaps by default, so no API key is required. Distributed both as an npm package and as copy-paste sources via `ng add` (you own the code).
+
+Version: 21.0.0-beta.7 · License: MIT · npm: https://www.npmjs.com/package/ng-mapcn
+
+## Overview
+
+- [Repository](https://github.com/juanvieiraprado99/ng-mapcn): source, issues, releases.
+- [Documentation](https://github.com/juanvieiraprado99/ng-mapcn#readme): installation, theming, components.
+- [API Reference](https://github.com/juanvieiraprado99/ng-mapcn#components): every component with inputs and outputs.
+- [llms-full.txt](/llms-full.txt): the complete API in one file, for agents.
+
+## Components
+
+- **Map** (`ng-map`): The root container component that initializes MapLibre GL and provides context to child components. Automatically handles theme switching between light and dark modes.
+- **MapControls** (`ng-map-controls`): Renders map control buttons: zoom, compass, locate, and fullscreen. Must be used inside ng-map.
+- **MapMarker** (`ng-map-marker`): A container for marker-related components. Provides context for its children and handles marker positioning.
+- **MarkerContent** (`ng-marker-content`): Renders the visual content of a marker via content projection. If left empty, a default blue dot is rendered. Must be used inside ng-map-marker.
+- **MarkerLabel** (`ng-marker-label`): An always-visible text label above or below the marker. Must be used inside ng-marker-content.
+- **MarkerPopup** (`ng-marker-popup`): A popup attached to the marker that opens on click. Must be used inside ng-map-marker.
+- **MarkerTooltip** (`ng-marker-tooltip`): A tooltip that appears on marker hover. Must be used inside ng-map-marker.
+- **MapPopup** (`ng-map-popup`): A standalone popup component that can be placed anywhere on the map without a marker. Must be used inside ng-map.
+- **MapRoute** (`ng-map-route`): Renders a line/route from the given coordinates. Must be used inside ng-map. Supports click and hover interactions.
+- **MapArc** (`ng-map-arc`): Renders curved lines between coordinate pairs using quadratic Bézier interpolation, with longitude unwrapping across the antimeridian. Must be used inside ng-map.
+- **MapGeoJSON** (`ng-map-geojson`): Renders GeoJSON polygons and lines with theme-aware monochrome defaults and declarative feature-state hover. Accepts a URL or an inline GeoJSON object. Must be used inside ng-map.
+- **MapClusterLayer** (`ng-map-cluster-layer`): Renders clustered points with MapLibre GL native clustering. Automatically styles cluster circles by point count, zooms in on cluster click. Must be used inside ng-map.
+
+Utilities: `MapViewport`, `getViewport`, `buildArcCoordinates`, `mergeHoverPaint`, `blankMapStyle`, `defaultStyles`, `MapStylesConfig`, `provideMapStyles()`, `MAP_DEFAULT_STYLES`, and `MapContextService` (map / isLoaded / resolvedTheme signals, the equivalent of mapcn's `useMap()`).
+
+## Installation
+
+### Copy-paste (recommended, shadcn-style)
+
+```bash
+ng add ng-mapcn
+```
+
+Adds `maplibre-gl`, registers its CSS, appends the required `.maplibregl-popup-*` overrides and copies the component sources into `src/app/components/ui/map` (customize with `--path`).
+
+### npm package
+
+```bash
+npm install ng-mapcn maplibre-gl
+```
+
+```scss
+// global styles.scss
+@use 'ng-mapcn/src/lib/styles/index' as *;  // tokens + utilities
+@use 'ng-mapcn/styles.scss' as *;           // required popup overrides
+@import 'maplibre-gl/dist/maplibre-gl.css'; // MapLibre base CSS
+```
+
+The `.maplibregl-popup-*` overrides are **required** — MapLibre injects its own popup chrome, which must be neutralized for popups and tooltips to render correctly.
+
+## Quick start
+
+```html
+<ng-map [center]="[-46.63, -23.55]" [zoom]="10">
+  <ng-map-controls position="bottom-right" [showZoom]="true" [showCompass]="true" />
+
+  <ng-map-marker [longitude]="-46.63" [latitude]="-23.55" [draggable]="true">
+    <ng-marker-content><!-- empty = default blue dot --></ng-marker-content>
+    <ng-marker-popup><strong>São Paulo</strong></ng-marker-popup>
+    <ng-marker-tooltip>Olá!</ng-marker-tooltip>
+  </ng-map-marker>
+
+  <ng-map-route [coordinates]="lineCoords" color="#4285F4" [width]="3" />
+</ng-map>
+```
+
+## Basemaps
+
+Any MapLibre-compatible style works. Set it per map with the `styles` input, or app-wide with `provideMapStyles()`. Precedence: `[styles]` → `[blank]` → `provideMapStyles()` → Carto default.
+
+| Provider | Style URL | API key |
+|---|---|---|
+| Carto (default) | `https://basemaps.cartocdn.com/gl/{positron|dark-matter|voyager}-gl-style/style.json` | no |
+| OpenFreeMap | `https://tiles.openfreemap.org/styles/{liberty|bright|positron|dark|fiord}` | no |
+| OpenStreetMap | raster tiles `https://tile.openstreetmap.org/{z}/{x}/{y}.png` — build the StyleSpecification by hand; dev/demo only (tile usage policy) | no |
+| MapTiler | `https://api.maptiler.com/maps/{streets-v4|streets-v4-dark|dataviz-v4}/style.json?key=KEY` | yes |
+| Stadia Maps | `https://tiles.stadiamaps.com/styles/{alidade_smooth|alidade_smooth_dark}.json?api_key=KEY` | keyless on localhost |
+
+## Theming
+
+Without a `theme` input, the map watches the `dark`/`light` class on `document.documentElement` (works with any theme toggler) and falls back to `prefers-color-scheme`. Switching theme calls `map.setStyle(..., { diff: true })`; every layer component re-adds itself automatically once the style settles.
+
+## Key Features
+
+- **MapLibre GL JS v5** under the hood — no API keys required (Carto basemaps)
+- **Composable** — markers, popups, routes, GeoJSON, arcs and clusters are children of `<ng-map>`
+- **Signals-first** — standalone components, `input()`/`output()`, `effect()`-based reconciliation, OnPush
+- **Theme-aware** — swaps the basemap at runtime, layers survive the style change
+- **SSR-safe** — the map is created in `afterNextRender`; nothing touches `document` on the server
+- **Copy-paste distribution** — `ng add ng-mapcn` copies the sources into your project (shadcn-style)
+
+## Tech Stack
+
+- Angular 21+ (standalone, signals, zoneless-friendly)
+- TypeScript
+- MapLibre GL JS v5
+- TailwindCSS (demo site)
+- Carto basemaps (default tiles)
+
+## Credits
+
+- [mapcn](https://www.mapcn.dev) — the React + MapLibre GL library this is an Angular port of
+- [Zard UI](https://zardui.com) — Angular component library used to build the demo/docs site
+- [MapLibre GL JS](https://maplibre.org) — rendering engine
+- [Carto](https://carto.com) — default basemaps
+
+## License
+
+MIT

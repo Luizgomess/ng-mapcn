@@ -1,8 +1,34 @@
 /* ng-mapcn global styles: theme tokens + utility classes for MapLibre DOM */
-@use '../../../projects/ng-mapcn/src/lib/styles/index' as *;
+@use '../../../projects/ng-mapcn/src/lib/styles/utilities' as *;
 
 /* MapLibre CSS (plain CSS @import, passed through by Sass) */
 @import 'maplibre-gl/dist/maplibre-gl.css';
+
+/* Tooltips that supply their own card (e.g. EV-charging) opt out of the
+   default inverted pill so the inner .demo-tooltip-card controls the look. */
+.ng-tooltip-pill:has(.demo-tooltip-card) {
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+/* Rich popup: card lets the inner .demo-rich-popup control padding/width so the
+   image can sit flush to the top edge (mirrors mapcn's `w-62 p-0`). */
+.ng-popup-card:has(.demo-rich-popup) {
+  padding: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Shared demo marker dot (colored via inline style) */
+.city-marker-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.25);
+  cursor: pointer;
+}
 
 /* Global styles */
 body {

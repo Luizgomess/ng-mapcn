@@ -1,0 +1,163 @@
+import { isPlatformBrowser } from '@angular/common';
+import { computed, effect, inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
+import type { StyleSpecification } from 'maplibre-gl';
+// Type-only: a value import would pull the whole ng-mapcn FESM (and with it
+// maplibre-gl) into the initial bundle, since this service is root-provided.
+import type { MapStylesConfig } from 'ng-mapcn';
+
+export type BasemapId = 'carto' | 'openfreemap' | 'osm' | 'maptiler' | 'stadia';
+
+export interface BasemapProvider {
+  readonly id: BasemapId;
+  readonly label: string;
+  readonly needsKey: boolean;
+  /** Where the user gets an API key. */
+  readonly keyUrl?: string;
+  readonly note?: string;
+  /** `undefined` = fall back to the library's Carto defaults. */
+  styles(key: string): MapStylesConfig | undefined;
+}
+
+/**
+ * Raster style built by hand — OpenStreetMap serves tiles, not a style.json.
+ * Kept as a module constant so the reference is stable: `ng-map` compares the
+ * resolved style by identity before calling `setStyle`.
+ */
+const OSM_RASTER_STYLE: StyleSpecification = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+};
+
+export const BASEMAP_PROVIDERS: readonly BasemapProvider[] = [
+  {
+    id: 'carto',
+    label: 'Carto (default)',
+    needsKey: false,
+    styles: () => undefined,
+  },
+  {
+    id: 'openfreemap',
+    label: 'OpenFreeMap',
+    needsKey: false,
+    styles: () => ({
+      light: 'https://tiles.openfreemap.org/styles/positron',
+      dark: 'https://tiles.openfreemap.org/styles/dark',
+    }),
+  },
+  {
+    id: 'osm',
+    label: 'OpenStreetMap',
+    needsKey: false,
+    note: 'Raster tiles. Dev/demo only — see the OSM tile usage policy.',
+    styles: () => ({ light: OSM_RASTER_STYLE, dark: OSM_RASTER_STYLE }),
+  },
+  {
+    id: 'maptiler',
+    label: 'MapTiler',
+    needsKey: true,
+    keyUrl: 'https://cloud.maptiler.com/account/keys/',
+    styles: (key) =>
+      key
+        ? {
+            light: `https://api.maptiler.com/maps/streets-v4/style.json?key=${key}`,
+            dark: `https://api.maptiler.com/maps/streets-v4-dark/style.json?key=${key}`,
+          }
+        : undefined,
+  },
+  {
+    id: 'stadia',
+    label: 'Stadia Maps',
+    needsKey: true,
+    keyUrl: 'https://client.stadiamaps.com/',
+    note: 'Key optional on localhost (rate limited).',
+    styles: (key) => {
+      const auth = key ? `?api_key=${key}` : '';
+      return {
+        light: `https://tiles.stadiamaps.com/styles/alidade_smooth.json${auth}`,
+        dark: `https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json${auth}`,
+      };
+    },
+  },
+];
+
+const STORAGE_KEY = 'ng-mapcn-demo:basemap';
+
+interface PersistedState {
+  providerId: BasemapId;
+  keys: Partial<Record<BasemapId, string>>;
+}
+
+/**
+ * Basemap selected in the header. Wired into the library through
+ * `provideMapStyles()` in `app.config.ts`, so every `<ng-map>` that does not
+ * set its own `[styles]` (or `[blank]`) follows this signal live.
+ */
+@Injectable({ providedIn: 'root' })
+export class BasemapService {
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+
+  readonly providers = BASEMAP_PROVIDERS;
+
+  private readonly restored = this.restore();
+
+  readonly providerId = signal<BasemapId>(this.restored.providerId);
+  readonly keys = signal<Partial<Record<BasemapId, string>>>(this.restored.keys);
+
+  readonly provider = computed(
+    () =>
+      this.providers.find((p) => p.id === this.providerId()) ?? this.providers[0],
+  );
+
+  readonly key = computed(() => this.keys()[this.providerId()] ?? '');
+
+  readonly styles = computed<MapStylesConfig | undefined>(() =>
+    this.provider().styles(this.key()),
+  );
+
+  constructor() {
+    effect(() => {
+      const state: PersistedState = {
+        providerId: this.providerId(),
+        keys: this.keys(),
+      };
+      if (!this.isBrowser) return;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch {}
+    });
+  }
+
+  select(id: BasemapId): void {
+    this.providerId.set(id);
+  }
+
+  setKey(id: BasemapId, key: string): void {
+    this.keys.update((keys) => ({ ...keys, [id]: key.trim() }));
+  }
+
+  private restore(): PersistedState {
+    const fallback: PersistedState = { providerId: 'carto', keys: {} };
+    if (!this.isBrowser) return fallback;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return fallback;
+      const parsed = JSON.parse(raw) as Partial<PersistedState>;
+      const known = BASEMAP_PROVIDERS.some((p) => p.id === parsed.providerId);
+      return {
+        providerId: known ? (parsed.providerId as BasemapId) : 'carto',
+        keys: parsed.keys ?? {},
+      };
+    } catch {
+      return fallback;
+    }
+  }
+}

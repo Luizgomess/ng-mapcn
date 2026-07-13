@@ -1,0 +1,416 @@
+# ng-mapcn — full reference
+
+> Angular port of [mapcn](https://www.mapcn.dev) — composable MapLibre GL v5 map components in the spirit of shadcn/ui. Standalone, signals-first, OnPush, SSR-safe, theme-aware. Carto basemaps by default, so no API key is required. Distributed both as an npm package and as copy-paste sources via `ng add` (you own the code).
+
+Version: 21.0.0-beta.7 · License: MIT · Repository: https://github.com/juanvieiraprado99/ng-mapcn
+
+## Installation
+
+### Copy-paste (recommended, shadcn-style)
+
+```bash
+ng add ng-mapcn
+```
+
+Adds `maplibre-gl`, registers its CSS, appends the required `.maplibregl-popup-*` overrides and copies the component sources into `src/app/components/ui/map` (customize with `--path`).
+
+### npm package
+
+```bash
+npm install ng-mapcn maplibre-gl
+```
+
+```scss
+// global styles.scss
+@use 'ng-mapcn/src/lib/styles/index' as *;  // tokens + utilities
+@use 'ng-mapcn/styles.scss' as *;           // required popup overrides
+@import 'maplibre-gl/dist/maplibre-gl.css'; // MapLibre base CSS
+```
+
+The `.maplibregl-popup-*` overrides are **required** — MapLibre injects its own popup chrome, which must be neutralized for popups and tooltips to render correctly.
+
+## Quick start
+
+```html
+<ng-map [center]="[-46.63, -23.55]" [zoom]="10">
+  <ng-map-controls position="bottom-right" [showZoom]="true" [showCompass]="true" />
+
+  <ng-map-marker [longitude]="-46.63" [latitude]="-23.55" [draggable]="true">
+    <ng-marker-content><!-- empty = default blue dot --></ng-marker-content>
+    <ng-marker-popup><strong>São Paulo</strong></ng-marker-popup>
+    <ng-marker-tooltip>Olá!</ng-marker-tooltip>
+  </ng-map-marker>
+
+  <ng-map-route [coordinates]="lineCoords" color="#4285F4" [width]="3" />
+</ng-map>
+```
+
+## Component anatomy
+
+Every part of the component set, and how they nest:
+
+```html
+<ng-map [center]="[-74.006, 40.7128]" [zoom]="11">
+  <ng-map-controls />
+
+  <ng-map-marker [longitude]="-74.006" [latitude]="40.7128">
+    <ng-marker-content>
+      <div class="size-4 rounded-full bg-blue-500"></div>
+      <ng-marker-label position="top">New York</ng-marker-label>
+    </ng-marker-content>
+    <ng-marker-tooltip>Hover content</ng-marker-tooltip>
+    <ng-marker-popup>Click content</ng-marker-popup>
+  </ng-map-marker>
+
+  <ng-map-popup [longitude]="-74" [latitude]="40.7">Standalone popup</ng-map-popup>
+  <ng-map-route [coordinates]="coordinates" />
+  <ng-map-arc [data]="arcs" />
+  <ng-map-geojson [data]="geojson" />
+  <ng-map-cluster-layer [data]="points" />
+</ng-map>
+```
+
+## Components
+
+### Map
+
+`ng-map`
+
+The root container component that initializes MapLibre GL and provides context to child components. Automatically handles theme switching between light and dark modes.
+
+**Inputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `center` | `[number, number]` | `[0, 0]` | Initial center coordinates as [longitude, latitude]. |
+| `zoom` | `number` | `2` | Initial zoom level of the map. |
+| `styles` | `MapStylesConfig` | `CARTO` | Custom style URLs or style objects for light and dark themes. |
+| `blank` | `boolean` | `false` | Swaps the basemap for a transparent, tile-less canvas. Add your own layers on top. |
+| `projection` | `ProjectionSpecification` | — | Map projection, e.g. { type: 'globe' }. |
+| `theme` | `'light' | 'dark' | 'auto'` | `'auto'` | Force a theme, or 'auto' to follow the dark/light class on <html>. |
+| `loading` | `boolean` | `false` | Shows the loading overlay. |
+| `viewport` | `Partial<MapViewport>` | — | Controlled viewport ({ center, zoom, bearing, pitch }). Pair with viewportChange. |
+| `options` | `Omit<MapOptions, 'container' | 'style'>` | — | Extra MapLibre MapOptions (scrollZoom, dragRotate, …) passed to the map constructor. |
+
+**Outputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `viewportChange` | `MapViewport` | — | Emits on every viewport change (move, zoom, rotate, pitch). |
+| `mapReady` | `Map` | — | Emits the raw maplibre-gl Map instance once loaded. |
+| `mapClick` | `MapMouseEvent` | — | Emits when the map is clicked. |
+| `mapError` | `Error` | — | Emits when the map fails to initialize or load. |
+
+### MapControls
+
+`ng-map-controls`
+
+Renders map control buttons: zoom, compass, locate, and fullscreen. Must be used inside ng-map.
+
+**Inputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `position` | `'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'` | `'bottom-right'` | Corner of the map to place the controls in. |
+| `showZoom` | `boolean` | `true` | Show zoom in/out buttons. |
+| `showCompass` | `boolean` | `false` | Show compass button (resets bearing). |
+| `showLocate` | `boolean` | `false` | Show geolocate button. |
+| `showFullscreen` | `boolean` | `false` | Show fullscreen toggle button. |
+
+**Outputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `locateChange` | `{ longitude: number; latitude: number }` | — | Emits the user position after a successful locate. |
+
+### MapMarker
+
+`ng-map-marker`
+
+A container for marker-related components. Provides context for its children and handles marker positioning.
+
+**Inputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `longitude` | `number` | `required` | Longitude coordinate of the marker. |
+| `latitude` | `number` | `required` | Latitude coordinate of the marker. |
+| `draggable` | `boolean` | `false` | Allows the marker to be dragged. |
+| `offset` | `PointLike` | — | Pixel offset applied to the marker element. |
+| `rotation` | `number` | `0` | Rotation of the marker in degrees. |
+| `anchor` | `PositionAnchor` | — | Part of the marker element positioned at the coordinates. |
+| `rotationAlignment` | `'map' | 'viewport' | 'auto'` | `'auto'` | How the marker rotates with the map. |
+| `pitchAlignment` | `'map' | 'viewport' | 'auto'` | `'auto'` | How the marker tilts with the map pitch. |
+
+**Outputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `markerClick` | `MouseEvent` | — | Emits when the marker is clicked. |
+| `markerMouseEnter` | `MouseEvent` | — | Emits when the pointer enters the marker. |
+| `markerMouseLeave` | `MouseEvent` | — | Emits when the pointer leaves the marker. |
+| `dragStart` | `{ lng: number; lat: number }` | — | Emits when dragging starts. |
+| `drag` | `{ lng: number; lat: number }` | — | Emits continuously while dragging. |
+| `dragEnd` | `{ lng: number; lat: number }` | — | Emits the final position after dragging. |
+
+### MarkerContent
+
+`ng-marker-content`
+
+Renders the visual content of a marker via content projection. If left empty, a default blue dot is rendered. Must be used inside ng-map-marker.
+
+### MarkerLabel
+
+`ng-marker-label`
+
+An always-visible text label above or below the marker. Must be used inside ng-marker-content.
+
+**Inputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `position` | `'top' | 'bottom'` | `'top'` | Side of the marker the label appears on. |
+
+### MarkerPopup
+
+`ng-marker-popup`
+
+A popup attached to the marker that opens on click. Must be used inside ng-map-marker.
+
+**Outputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `popupClose` | `void` | — | Emits when the popup closes. |
+
+### MarkerTooltip
+
+`ng-marker-tooltip`
+
+A tooltip that appears on marker hover. Must be used inside ng-map-marker.
+
+**Inputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `offset` | `Offset` | `16` | Pixel distance between the marker and the tooltip. |
+| `anchor` | `PositionAnchor` | — | Which side of the coordinates the tooltip anchors to. |
+
+### MapPopup
+
+`ng-map-popup`
+
+A standalone popup component that can be placed anywhere on the map without a marker. Must be used inside ng-map.
+
+**Inputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `longitude` | `number` | `required` | Longitude coordinate of the popup. |
+| `latitude` | `number` | `required` | Latitude coordinate of the popup. |
+| `closeButton` | `boolean` | `false` | Shows a close button in the popup. |
+| `offset` | `Offset` | `16` | Pixel offset of the popup. |
+| `maxWidth` | `string` | `'none'` | CSS max-width of the popup container. |
+
+**Outputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `popupClose` | `void` | — | Emits when the popup closes. |
+
+### MapRoute
+
+`ng-map-route`
+
+Renders a line/route from the given coordinates. Must be used inside ng-map. Supports click and hover interactions.
+
+**Inputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `coordinates` | `[number, number][]` | `required` | Array of [longitude, latitude] points forming the line. |
+| `id` | `string` | `auto` | Optional stable id for the underlying source/layer. |
+| `color` | `string` | `'#4285F4'` | Line color. |
+| `width` | `number` | `3` | Line width in pixels. |
+| `opacity` | `number` | `0.8` | Line opacity. |
+| `dashArray` | `number[]` | — | Dash pattern, e.g. [2, 2]. |
+| `interactive` | `boolean` | `true` | Enables pointer events on the line. |
+
+**Outputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `routeClick` | `MapMouseEvent` | — | Emits when the route is clicked. |
+
+### MapArc
+
+`ng-map-arc`
+
+Renders curved lines between coordinate pairs using quadratic Bézier interpolation, with longitude unwrapping across the antimeridian. Must be used inside ng-map.
+
+**Inputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `data` | `MapArcDatum[]` | `required` | Arcs to draw: { id, from: [lng, lat], to: [lng, lat] }. Extra properties are exposed to paint expressions. |
+| `id` | `string` | `auto` | Optional stable id for the underlying source/layer. |
+| `curvature` | `number` | `0.2` | How much the arc bends. |
+| `samples` | `number` | `64` | Number of interpolation points per arc. |
+| `paint` | `LineLayerSpecification["paint"]` | — | MapLibre line paint properties. |
+| `layout` | `LineLayerSpecification["layout"]` | — | MapLibre line layout properties. |
+| `hoverPaint` | `LineLayerSpecification["paint"]` | — | Paint overrides applied to the hovered arc via feature-state. |
+| `interactive` | `boolean` | `true` | Enables pointer events (adds an invisible hit layer). |
+| `beforeId` | `string` | — | Insert the layer before this layer id. |
+
+**Outputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `arcClick` | `MapArcEvent` | — | Emits { arc, longitude, latitude, originalEvent } when an arc is clicked. |
+| `arcHover` | `MapArcEvent | null` | — | Emits on hover; null when the pointer leaves. |
+
+### MapGeoJSON
+
+`ng-map-geojson`
+
+Renders GeoJSON polygons and lines with theme-aware monochrome defaults and declarative feature-state hover. Accepts a URL or an inline GeoJSON object. Must be used inside ng-map.
+
+**Inputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `data` | `MapGeoJSONData` | `required` | GeoJSON object or URL string. |
+| `id` | `string` | `auto` | Optional stable id for the underlying source/layer. |
+| `promoteId` | `string` | — | Feature property used as feature id — required for hover feature-state. |
+| `fillPaint` | `FillLayerSpecification["paint"]` | `theme mono` | Fill paint properties. |
+| `linePaint` | `LineLayerSpecification["paint"]` | `theme mono` | Outline paint properties. |
+| `fillHoverPaint` | `FillLayerSpecification["paint"]` | — | Fill paint overrides applied to the hovered feature. |
+| `interactive` | `boolean` | `false` | Enables pointer events and hover tracking. |
+| `beforeId` | `string` | — | Insert the layers before this layer id. |
+
+**Outputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `featureClick` | `MapGeoJSONEvent` | — | Emits { feature, longitude, latitude, originalEvent } on click. |
+| `featureHover` | `MapGeoJSONEvent | null` | — | Emits on hover; null when the pointer leaves. |
+
+### MapClusterLayer
+
+`ng-map-cluster-layer`
+
+Renders clustered points with MapLibre GL native clustering. Automatically styles cluster circles by point count, zooms in on cluster click. Must be used inside ng-map.
+
+**Inputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `data` | `MapGeoJSONData` | `required` | GeoJSON points (object or URL string). |
+| `clusterMaxZoom` | `number` | `14` | Max zoom at which points are clustered. |
+| `clusterRadius` | `number` | `50` | Cluster radius in pixels. |
+| `clusterColors` | `[string, string, string]` | `['#22c55e', '#eab308', '#ef4444']` | Circle colors for small/medium/large clusters. |
+| `clusterThresholds` | `[number, number]` | `[100, 750]` | Point-count thresholds between color tiers. |
+| `pointColor` | `string` | `'#3b82f6'` | Color of unclustered points. |
+| `zoomOnClusterClick` | `boolean` | `true` | Zooms into a cluster when it is clicked. |
+
+**Outputs**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `pointClick` | `ClusterPointClickEvent` | — | Emits { feature, coordinates } when an unclustered point is clicked. |
+| `clusterClick` | `ClusterClickEvent` | — | Emits { clusterId, coordinates, pointCount } when a cluster is clicked. |
+
+## MapContextService
+
+Component-scoped service provided by `ng-map` — the Angular equivalent of mapcn's `useMap()` hook. Inject it in any component projected inside `ng-map` to reach the raw map.
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `map()` | `Signal<Map | null>` | — | The raw maplibre-gl Map instance, or null before init. |
+| `isLoaded()` | `Signal<boolean>` | — | True when the style is loaded and layers can be added. Gates every source/layer operation. |
+| `resolvedTheme()` | `Signal<'light' | 'dark'>` | — | Theme currently applied to the map. |
+
+## provideMapStyles()
+
+Sets the app-wide default basemap through the `MAP_DEFAULT_STYLES` token. Every `ng-map` without its own `styles` input (and without `blank`) uses it; pass a signal to swap the basemap at runtime.
+
+```ts
+import { inject } from '@angular/core';
+import { provideMapStyles } from 'ng-mapcn';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    // Static config...
+    provideMapStyles({
+      light: 'https://tiles.openfreemap.org/styles/positron',
+      dark: 'https://tiles.openfreemap.org/styles/dark',
+    }),
+
+    // ...or a signal, so the basemap can be switched at runtime
+    provideMapStyles(() => inject(BasemapService).styles),
+  ],
+};
+```
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `MapStylesConfig` | `{ light?: string | StyleSpecification; dark?: string | StyleSpecification }` | — | Per-theme basemap. A theme left undefined falls back to the Carto default for that theme. |
+| `provideMapStyles(source)` | `MapStylesConfig | Signal<MapStylesConfig | undefined> | (() => Signal<MapStylesConfig | undefined>)` | — | Provider for the app-wide basemap. The factory form runs in an injection context, so it can inject() a service holding the signal. |
+| `MAP_DEFAULT_STYLES` | `InjectionToken<Signal<MapStylesConfig | undefined>>` | — | The token itself, if you want to provide it by hand. |
+
+## Basemaps
+
+Any MapLibre-compatible style works. Set it per map with the `styles` input, or app-wide with `provideMapStyles()`. Precedence: `[styles]` → `[blank]` → `provideMapStyles()` → Carto default.
+
+| Provider | Style URL | API key |
+|---|---|---|
+| Carto (default) | `https://basemaps.cartocdn.com/gl/{positron|dark-matter|voyager}-gl-style/style.json` | no |
+| OpenFreeMap | `https://tiles.openfreemap.org/styles/{liberty|bright|positron|dark|fiord}` | no |
+| OpenStreetMap | raster tiles `https://tile.openstreetmap.org/{z}/{x}/{y}.png` — build the StyleSpecification by hand; dev/demo only (tile usage policy) | no |
+| MapTiler | `https://api.maptiler.com/maps/{streets-v4|streets-v4-dark|dataviz-v4}/style.json?key=KEY` | yes |
+| Stadia Maps | `https://tiles.stadiamaps.com/styles/{alidade_smooth|alidade_smooth_dark}.json?api_key=KEY` | keyless on localhost |
+
+## Theming
+
+Without a `theme` input, the map watches the `dark`/`light` class on `document.documentElement` (works with any theme toggler) and falls back to `prefers-color-scheme`. Switching theme calls `map.setStyle(..., { diff: true })`; every layer component re-adds itself automatically once the style settles.
+
+## SSR
+
+The map is created in `afterNextRender` (browser-only, after hydration) and every child component gates its work on the map signal, which is `null` on the server. On the server the host renders a plain container `<div>` plus the loader, which matches the first client render and hydrates cleanly. Enable `provideClientHydration(withEventReplay())` in the consumer app.
+
+## Invariants (when editing the library sources)
+
+1. Every source/layer operation is gated on `MapContextService.isLoaded()` (map `load` + debounced `styledata`). A theme or basemap switch calls `setStyle`, which destroys layers — the gate closes and reopens, and each layer component's creation `effect` re-adds everything.
+2. MapLibre objects are created **once** and reconciled with diffed setters; never destroyed/recreated on input changes.
+3. Controlled viewport uses an internal flag around `jumpTo` plus a `map.isMoving()` skip to avoid feedback loops.
+4. Teardown is defensive (try/catch): remove layers before the source; symmetric `map.off` for every `map.on(event, layerId, handler)`.
+5. Declarative hover = `promoteId` + `setFeatureState` + `mergeHoverPaint` (case expressions on `feature-state hover`).
+6. Arcs render an invisible hit layer with `width = max(line-width + 6, 12)` under the visible layer.
+
+## Key Features
+
+- **MapLibre GL JS v5** under the hood — no API keys required (Carto basemaps)
+- **Composable** — markers, popups, routes, GeoJSON, arcs and clusters are children of `<ng-map>`
+- **Signals-first** — standalone components, `input()`/`output()`, `effect()`-based reconciliation, OnPush
+- **Theme-aware** — swaps the basemap at runtime, layers survive the style change
+- **SSR-safe** — the map is created in `afterNextRender`; nothing touches `document` on the server
+- **Copy-paste distribution** — `ng add ng-mapcn` copies the sources into your project (shadcn-style)
+
+## Tech Stack
+
+- Angular 21+ (standalone, signals, zoneless-friendly)
+- TypeScript
+- MapLibre GL JS v5
+- TailwindCSS (demo site)
+- Carto basemaps (default tiles)
+
+## Credits
+
+- [mapcn](https://www.mapcn.dev) — the React + MapLibre GL library this is an Angular port of
+- [Zard UI](https://zardui.com) — Angular component library used to build the demo/docs site
+- [MapLibre GL JS](https://maplibre.org) — rendering engine
+- [Carto](https://carto.com) — default basemaps
+
+## License
+
+MIT
