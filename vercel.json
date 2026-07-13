@@ -1,0 +1,5 @@
+{
+  "framework": "angular",
+  "installCommand": "npm pkg delete dependencies.ng-mapcn && npm install",
+  "buildCommand": "node scripts/vercel-build.mjs"
+}
