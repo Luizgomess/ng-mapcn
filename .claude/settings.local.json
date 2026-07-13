@@ -11,7 +11,9 @@
       "mcp__plugin_context-mode_context-mode__ctx_stats",
       "mcp__plugin_context-mode_context-mode__ctx_execute_file",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index",
+      "Bash(rtk git *)"
     ]
   }
 }

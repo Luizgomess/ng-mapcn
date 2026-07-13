@@ -14,6 +14,7 @@
       "nexus": ["./dist/ng-mapcn"]
     },
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "sourceMap": true,
     "declaration": false,
     "experimentalDecorators": true,

@@ -8,9 +8,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Install dependencies
 npm install
 
-# Build the library
-ng build ng-mapcn
-ng build ng-mapcn --configuration production
+# Build the library (includes schematics)
+npm run build:lib
+npm run build:lib:prod
+
+# Build only the schematics into dist/ng-mapcn/schematics
+npm run build:schematics
 
 # Build library, pack it, install locally, and serve demo app
 npm run build-ui-dev
@@ -34,32 +37,41 @@ The demo app depends on `ng-mapcn` installed as a local `.tgz` file from `dist/`
 
 This is an **Angular library workspace** (`ng-packagr`) with two projects:
 
-- `projects/ng-mapcn/` — the publishable library
+- `projects/ng-mapcn/` — the publishable library, an Angular port of [mapcn](https://mapcn.dev) (React + MapLibre GL v5)
 - `projects/demo/` — a demo/test app that consumes the built library
 
 ### Library structure (`projects/ng-mapcn/src/lib/`)
 
-**Components** (all standalone):
+**Composition model (mapcn parity):** `<ng-map>` provides a component-scoped `MapContextService` (`providers: [MapContextService]`). All child components (`ng-map-marker`, `ng-map-route`, `ng-map-geojson`, `ng-map-arc`, `ng-map-cluster-layer`, `ng-map-controls`, `ng-map-popup`) resolve the map via `inject(MapContextService)` — the Angular equivalent of mapcn's `useMap()`. There is no global registry.
 
-- `map/map.component.ts` — Core map host. Wraps MapLibre GL, registers itself with `MapService` by `mapId`, handles theme switching, and emits lifecycle/interaction events. All other components/services look up the map instance via `mapId`.
-- `marker/marker.component.ts` — Declarative marker; delegates to `MarkerService`.
-- `route/route.component.ts` — Draws GeoJSON line routes on the map.
-- `controls/map-controls.component.ts` — Adds native MapLibre controls (zoom, compass, geolocate, fullscreen).
-- `route-planning/route-planning.component.ts` — UI for point-to-point routing via OSRM.
+- `components/map/` — map host: MapLibre init (`renderWorldCopies: false`, compact attribution), theme-driven `setStyle`, `blank` style, controlled `viewport` with anti-feedback-loop guard, loader overlay.
+- `components/map-marker/` + `marker-content/`, `marker-popup/`, `marker-tooltip/`, `marker-label/` — marker created once, reconciled by diffed setters; content projected into `marker.getElement()` via embedded views (the Angular "portal").
+- `components/map-route|map-geojson|map-arc|map-cluster-layer/` — imperative layer components with empty templates.
+- `services/map-context.service.ts` — `map`, `isLoaded`, `resolvedTheme` signals.
+- `services/theme.service.ts` — watches the **`dark`/`light` class** on `document.documentElement` (MutationObserver) with a `prefers-color-scheme` fallback.
+- `utils/map-utils.ts` — `nextId`, `getViewport`, `mergeHoverPaint`, `buildArcCoordinates`, shared types.
+- `styles/` — SCSS tokens/utilities; `map-styles.ts` has Carto defaults + `blankMapStyle`.
 
-**Services**:
+**Invariants (from the mapcn port plan — do not violate):**
 
-- `MapService` — Central registry (`Map<mapId, MapLibreMap>`). All components communicate with the underlying MapLibre instance through this service using a shared `mapId` string.
-- `MarkerService` — Creates and manages MapLibre `Marker` and `Popup` instances; handles custom icons, popups, labels, and tooltips.
-- `ThemeService` — Signal-based (`theme = signal<'light'|'dark'>`) theme state. `MapComponent` observes `data-theme` on `document.documentElement` for `auto` mode.
-- `OsrmService` — HTTP client wrapper for OSRM routing API (requires `provideHttpClient()` in the consumer app).
+1. Every source/layer operation is gated on `MapContextService.isLoaded()` (map `load` + debounced `styledata`). Theme switch calls `setStyle`, which destroys layers — the gate closes and reopens, and each layer component's creation `effect` re-adds everything.
+2. MapLibre objects are created **once** and reconciled with diffed setters; never destroyed/recreated on input changes.
+3. Controlled viewport uses an internal flag around `jumpTo` plus `map.isMoving()` skip to avoid feedback loops.
+4. Teardown is defensive (try/catch): remove layers before the source; symmetric `map.off` for every `map.on(event, layerId, handler)`.
+5. Declarative hover = `promoteId` + `setFeatureState` + `mergeHoverPaint` (case expressions on `feature-state hover`).
+6. Arcs render an invisible hit layer with `width = max(line-width + 6, 12)` under the visible layer.
+
+### Distribution
+
+Two channels, same sources:
+
+- **npm package** — ng-packagr build (`dist/ng-mapcn`).
+- **Schematics copy-paste (shadcn-style)** — `ng add ng-mapcn` adds `maplibre-gl`, registers its CSS, appends the global `.maplibregl-popup-*` overrides and copies the sources into the consumer app. `scripts/sync-schematic-files.mjs` mirrors `src/lib/**` into `schematics/map/files/` (generated, git-ignored); `scripts/build-schematics.mjs` compiles and copies everything into `dist/ng-mapcn/schematics`.
 
 **Key patterns**:
 
-- All inputs use the Angular signals API (`input()`, `output()`).
-- Components are standalone — no NgModule.
-- `mapId` is the coordination key: `MapComponent` registers a map, and every other component/service uses the same `mapId` to retrieve it from `MapService`.
-- Theme-aware map styles are defined in `lib/styles/map-styles.ts` and applied by `MapComponent` when the theme changes.
+- All inputs/outputs use the Angular signals API (`input()`, `output()`); components are standalone and OnPush.
+- The global CSS overrides for `.maplibregl-popup-*` (in `projects/ng-mapcn/styles.scss`) are required for popups/tooltips to look right.
 
 ## Commits
 
