@@ -1,322 +1,155 @@
 # ng-mapcn
 
-**Beautiful maps for Angular, made simple.**
+Beautiful maps for Angular, made simple. An Angular port of [mapcn](https://mapcn.dev) — composable MapLibre GL components in the spirit of shadcn/ui.
 
-Free & open source map components for Angular 21+. Zero config, one command setup.
-Built on MapLibre GL, styled with SCSS, inspired by shadcn/ui.
-
-[GitHub Repository](https://github.com/juanvieiraprado99/ng-mapcn) | [Report Bug](https://github.com/juanvieiraprado99/ng-mapcn/issues)
-
-## Features
-
-- 🎨 **Theme-aware** — Automatically adapts to light/dark mode
-- 🎯 **Zero config** — Works out of the box with sensible defaults
-- 📦 **shadcn/ui compatible** — Uses the same patterns and styling conventions
-- 🗺️ **MapLibre GL powered** — Full access to MapLibre's powerful mapping capabilities
-- 🧩 **Composable** — Build complex map UIs with simple, declarative components
-- 📍 **Markers & Popups** — Rich marker system with popups, tooltips, and labels
-- 🛤️ **Routes** — Draw routes and paths on your maps
-- 🎮 **Controls** — Zoom, compass, locate, and fullscreen controls
+- **MapLibre GL JS v5** under the hood — no API keys required (Carto basemaps)
+- **Theme-aware** — follows the `dark`/`light` class on `<html>` (or `prefers-color-scheme`) and swaps the basemap at runtime
+- **Composable** — declare markers, popups, routes, GeoJSON, arcs and clusters as children of `<ng-map>`
+- **Signals-first** — standalone components, signal inputs/outputs, `effect()`-based reconciliation
+- **Copy-paste distribution** — `ng add ng-mapcn` copies the sources into your project so you own the code (shadcn-style). Also usable as a regular npm package.
 
 ## Installation
+
+### Copy-paste (recommended, shadcn-style)
+
+```bash
+ng add ng-mapcn
+```
+
+This will:
+
+1. Add `maplibre-gl` to your dependencies
+2. Register `maplibre-gl/dist/maplibre-gl.css` in `angular.json`
+3. Append the required `.maplibregl-popup-*` CSS overrides to your global stylesheet
+4. Copy the component sources to `src/app/components/ui/map` (customize with `--path`)
+
+Import from the copied barrel:
+
+```ts
+import { MapComponent, MapMarkerComponent } from './components/ui/map';
+```
+
+### npm package
 
 ```bash
 npm install ng-mapcn maplibre-gl
 ```
 
-## Quick Start
-
-### 1. Import the CSS
-
-Add MapLibre CSS to your `angular.json`:
-
-```json
-{
-  "styles": ["node_modules/maplibre-gl/dist/maplibre-gl.css"]
-}
-```
-
-Or import in your global styles:
+Then in your global `styles.scss`:
 
 ```scss
+// theme tokens + component utility classes
+@use 'ng-mapcn/src/lib/styles/index' as *;
+// required .maplibregl-popup-* overrides
+@use 'ng-mapcn/styles.scss' as *;
+// MapLibre base CSS
 @import 'maplibre-gl/dist/maplibre-gl.css';
 ```
 
-### 2. Use the Components
+The popup overrides are **required** — MapLibre injects its own popup chrome, which must be neutralized so the styled content shows cleanly:
 
-```typescript
-import { Component } from '@angular/core';
-import { MapComponent, MapControlsComponent } from 'ng-mapcn';
-
-@Component({
-  selector: 'app-my-map',
-  standalone: true,
-  imports: [MapComponent, MapControlsComponent],
-  template: `
-    <div style="width: 100%; height: 400px;">
-      <ng-map
-        [mapId]="'my-map'"
-        [center]="[0, 0]"
-        [zoom]="2"
-        (mapReady)="onMapReady($event)"
-      ></ng-map>
-      <ng-map-controls [mapId]="'my-map'" [showZoom]="true" [showLocate]="true"></ng-map-controls>
-    </div>
-  `,
-})
-export class MyMapComponent {
-  onMapReady(map: any) {
-    console.log('Map ready!', map);
-  }
+```css
+.maplibregl-popup-content {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
 }
+.maplibregl-popup-tip {
+  display: none !important;
+}
+```
+
+## Quick start
+
+```html
+<ng-map [center]="[-46.63, -23.55]" [zoom]="10">
+  <ng-map-controls position="bottom-right" [showZoom]="true" [showCompass]="true" />
+
+  <ng-map-marker [longitude]="-46.63" [latitude]="-23.55" [draggable]="true">
+    <ng-marker-content>
+      <!-- empty = default blue dot; or project any custom HTML -->
+    </ng-marker-content>
+    <ng-marker-popup><strong>São Paulo</strong></ng-marker-popup>
+    <ng-marker-tooltip>Olá!</ng-marker-tooltip>
+  </ng-map-marker>
+
+  <ng-map-route [coordinates]="lineCoords" color="#4285F4" [width]="3" />
+</ng-map>
 ```
 
 ## Components
 
-### MapComponent
+| Component | Description |
+|---|---|
+| `ng-map` | Map host. Inputs: `center`, `zoom`, `theme` (`light`/`dark`/`auto`), `styles` (per-theme basemap), `blank` (tile-less dataviz style), `projection`, `viewport` (controlled mode), `loading`, `options` (raw MapLibre `MapOptions`). Outputs: `viewportChange`, `mapReady`, `mapClick`, `mapError`. |
+| `ng-map-controls` | Zoom / compass / locate / fullscreen buttons (custom UI, not MapLibre `IControl`). |
+| `ng-map-marker` | Declarative marker. `longitude`, `latitude`, `draggable`, `offset`, `rotation`, `anchor`, alignments; click/hover/drag outputs. |
+| `ng-marker-content` | Projects custom HTML into the marker element (empty = default dot). |
+| `ng-marker-popup` / `ng-marker-tooltip` / `ng-marker-label` | Popup on click, tooltip on hover, CSS label above/below the marker. |
+| `ng-map-popup` | Standalone popup at a lng/lat (no marker). |
+| `ng-map-route` | LineString layer with color/width/opacity/dashArray and click output. |
+| `ng-map-geojson` | Fill + outline layers from GeoJSON data or URL. Declarative hover via `promoteId` + `fillHoverPaint` (feature-state). |
+| `ng-map-arc` | Curved arcs between points (flight paths). Invisible hit layer for comfortable hover/click; `hoverPaint` via feature-state. |
+| `ng-map-cluster-layer` | Clustered points with count labels, threshold-based colors/sizes and expansion-zoom on click. |
 
-The main map component.
+Utilities: `MapViewport`, `getViewport`, `buildArcCoordinates`, `mergeHoverPaint`, `blankMapStyle`, `defaultStyles`, and `MapContextService` (map / isLoaded / resolvedTheme signals for advanced layer work via `inject`).
 
-```html
-<ng-map
-  [mapId]="'my-map'"
-  [center]="[lng, lat]"
-  [zoom]="10"
-  [style]="'https://demotiles.maplibre.org/style.json'"
-  [theme]="'auto'"
-  (mapReady)="onMapReady($event)"
-  (mapClick)="onMapClick($event)"
-></ng-map>
+## Theming
+
+Without a `theme` input, the map watches the `dark`/`light` class on `document.documentElement` (works with any theme toggler) and falls back to `prefers-color-scheme`. Switching theme calls `map.setStyle(..., { diff: true })` and every layer component re-adds itself automatically once the style settles.
+
+## Basemaps
+
+Any MapLibre-compatible style works. Set it per map with `styles`, or once for the whole app with `provideMapStyles()`:
+
+```ts
+import { provideMapStyles } from 'ng-mapcn';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideMapStyles({
+      light: 'https://tiles.openfreemap.org/styles/positron',
+      dark: 'https://tiles.openfreemap.org/styles/dark',
+    }),
+    // ...or pass a Signal (or a factory that injects a service) to swap the
+    // basemap at runtime: provideMapStyles(() => inject(BasemapService).styles)
+  ],
+};
 ```
 
-**Inputs:**
+Precedence: `[styles]` → `[blank]` → `provideMapStyles()` → Carto default.
 
-- `mapId` - Unique identifier for the map instance
-- `center` - Initial center coordinates `[lng, lat]`
-- `zoom` - Initial zoom level
-- `style` - Map style URL or specification
-- `theme` - Theme mode: `'light'` | `'dark'` | `'auto'`
-- `config` - Full map configuration object
+| Provider | Style URL | API key |
+|---|---|---|
+| Carto (default) | `https://basemaps.cartocdn.com/gl/{positron\|dark-matter\|voyager}-gl-style/style.json` | no |
+| OpenFreeMap | `https://tiles.openfreemap.org/styles/{liberty\|bright\|positron\|dark\|fiord}` | no |
+| OpenStreetMap | raster tiles `https://tile.openstreetmap.org/{z}/{x}/{y}.png` — build the `StyleSpecification` by hand; dev/demo only ([tile usage policy](https://operations.osmfoundation.org/policies/tiles/)) | no |
+| MapTiler | `https://api.maptiler.com/maps/{streets-v4\|streets-v4-dark\|dataviz-v4}/style.json?key=KEY` | yes |
+| Stadia Maps | `https://tiles.stadiamaps.com/styles/{alidade_smooth\|alidade_smooth_dark}.json?api_key=KEY` | keyless on `localhost` |
 
-**Outputs:**
+Live examples for each: [ng-mapcn demo → Map Styles](https://github.com/juanvieiraprado99/ng-mapcn).
 
-- `mapReady` - Emitted when map is loaded
-- `mapClick` - Emitted on map click
-- `mapMove` - Emitted on map move
-- `mapZoom` - Emitted on zoom change
-
-### MarkerComponent
-
-Add markers to your map.
-
-```html
-<ng-marker
-  [mapId]="'my-map'"
-  [config]="{
-    position: [-74.5, 40],
-    popup: {
-      title: 'New York',
-      content: 'The Big Apple'
-    },
-    color: '#3b82f6'
-  }"
-  (markerClick)="onMarkerClick($event)"
-></ng-marker>
-```
-
-**Inputs:**
-
-- `mapId` - Map instance ID
-- `config` - Marker configuration (see `MarkerConfig` interface)
-
-**Outputs:**
-
-- `markerClick` - Emitted when marker is clicked
-- `markerHover` - Emitted when marker is hovered
-
-### RouteComponent
-
-Draw routes/paths on your map.
-
-```html
-<ng-route
-  [mapId]="'my-map'"
-  [config]="{
-    coordinates: [[-74.5, 40], [-73.5, 41]],
-    color: '#3b82f6',
-    width: 3,
-    dashed: false
-  }"
-  (routeClick)="onRouteClick($event)"
-></ng-route>
-```
-
-**Inputs:**
-
-- `mapId` - Map instance ID
-- `config` - Route configuration (see `RouteConfig` interface)
-
-**Outputs:**
-
-- `routeClick` - Emitted when route is clicked
-
-### Control Components
-
-#### MapControlsComponent
-
-Adiciona os controles nativos do MapLibre ao mapa (zoom, bússola, geolocalização, tela cheia).
-
-```html
-<ng-map-controls
-  [mapId]="'my-map'"
-  [position]="'top-right'"
-  [showZoom]="true"
-  [showCompass]="true"
-  [showLocate]="true"
-  [showFullscreen]="true"
-></ng-map-controls>
-```
-
-**Inputs:** `mapId`, `position`, `showZoom`, `showCompass`, `showLocate`, `showFullscreen`, `visualizePitch`, `visualizeRoll`.
-
-## Services
-
-### MapService
-
-Centralized map management and utilities.
-
-```typescript
-import { MapService } from 'ng-mapcn';
-
-constructor(private mapService: MapService) {}
-
-// Fly to location
-this.mapService.flyTo('my-map', [-74.5, 40], 15);
-
-// Get map center
-const center = this.mapService.getCenter('my-map');
-
-// Zoom in
-this.mapService.zoomIn('my-map');
-```
-
-### ThemeService
-
-Theme management for light/dark mode.
-
-```typescript
-import { ThemeService } from 'ng-mapcn';
-
-constructor(private themeService: ThemeService) {}
-
-// Set theme
-this.themeService.setTheme('dark');
-
-// Toggle theme
-this.themeService.toggleTheme();
-
-// Get current theme
-const theme = this.themeService.getTheme();
-```
-
-### MarkerService
-
-Marker management.
-
-```typescript
-import { MarkerService } from 'ng-mapcn';
-
-constructor(
-  private markerService: MarkerService,
-  private mapService: MapService
-) {}
-
-// Add marker programmatically
-const map = this.mapService.getMap('my-map');
-if (map) {
-  this.markerService.addMarker('my-map', {
-    position: [-74.5, 40],
-    popup: { title: 'Marker', content: 'Description' }
-  }, map);
-}
-```
-
-## Styling
-
-The library uses SCSS with CSS custom properties for theming, inspired by shadcn/ui.
-Import the library styles in your `angular.json` or global stylesheet:
-
-```json
-{ "styles": ["node_modules/ng-mapcn/styles.scss"] }
-```
-
-### Theme Variables
-
-CSS variables are defined using `oklch` and automatically switch between light and dark:
-
-```scss
-/* light (default) */
---background:   oklch(99% 0 0);
---foreground:   oklch(15% 0.02 240);
---primary:      oklch(55% 0.2 240);
---border:       oklch(92% 0.005 240);
-
-/* dark (.dark class or data-theme="dark") */
---background:   oklch(15% 0.02 240);
---foreground:   oklch(97% 0.005 240);
---primary:      oklch(65% 0.2 240);
---border:       oklch(30% 0.02 240);
-```
-
-### Custom Styling
-
-Override any variable on `:root` to apply your own brand colors:
-
-```scss
-:root {
-  --primary: oklch(55% 0.22 150); /* green */
-  --radius-md: 0.25rem;           /* sharper corners */
-}
-```
-
-## Examples
-
-See the `projects/demo` directory for complete examples.
-
-## API Reference
-
-### Interfaces
-
-- `MapConfig` - Map configuration
-- `MarkerConfig` - Marker configuration
-- `RouteConfig` - Route configuration
-- `ControlPosition` - Control position on the map
-- `ThemeConfig` - Theme configuration
-
-See the source code for detailed interface definitions.
-
-## Development
+## Demo
 
 ```bash
-# Install dependencies
 npm install
-
-# Build library
-ng build ng-mapcn
-
-# Run demo app
-ng serve demo
-
-# Build for production
-ng build ng-mapcn --configuration production
+npm run build-ui-dev   # builds the lib, installs it locally and serves the demo
 ```
 
-## License
+Examples: basic, markers, routes, controls, dark theme, custom style, globe fly-to, tooltips, fly-to markers, GeoJSON choropleth (hover), arcs on blank map, theme switch with layers, synced viewports.
 
-MIT License - see the LICENSE file for details.
+## For LLMs
+
+The docs site serves [`/llms.txt`](projects/demo/public/llms.txt) (index) and [`/llms-full.txt`](projects/demo/public/llms-full.txt) (every component, input, output and default in one file), following the [llmstxt.org](https://llmstxt.org) convention. Both are generated from the API reference data — run `npm run generate:llms` after changing the API.
 
 ## Credits
 
-- Built with [MapLibre GL](https://maplibre.org/)
-- Styling inspired by [shadcn/ui](https://ui.shadcn.com/)
-- Inspired by [mapcn](https://github.com/AnmolSaini16/mapcn) (React version)
+- **[mapcn](https://www.mapcn.dev)** ([docs](https://www.mapcn.dev/docs)) — the React + MapLibre GL library that inspired this project. ng-mapcn is an Angular port of its composition model and component API. All credit for the original design goes to its authors.
+- **[Zard UI](https://zardui.com)** ([docs](https://zardui.com/docs/installation)) — the Angular component library (shadcn-style, copy-paste) used to build this project's demo & documentation site.
+- **[MapLibre GL JS](https://maplibre.org)** — the rendering engine.
+- **[Carto](https://carto.com)** — the default free basemaps.
+
+## License
+
+MIT
