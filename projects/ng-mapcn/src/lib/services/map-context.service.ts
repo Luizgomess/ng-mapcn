@@ -6,14 +6,21 @@ export class MapContextService {
   private readonly mapSignal = signal<MapLibreMap | null>(null);
   private readonly loadedFlagSignal = signal(false);
   private readonly styleLoadedFlagSignal = signal(false);
+  private readonly resolvedThemeSignal = signal<'light' | 'dark'>('light');
 
   readonly map = this.mapSignal.asReadonly();
   readonly isLoaded = computed(
     () => this.loadedFlagSignal() && this.styleLoadedFlagSignal()
   );
+  /** Theme currently applied to the map (mapcn context `resolvedTheme`). */
+  readonly resolvedTheme = this.resolvedThemeSignal.asReadonly();
 
   setMap(map: MapLibreMap): void {
     this.mapSignal.set(map);
+  }
+
+  setResolvedTheme(theme: 'light' | 'dark'): void {
+    this.resolvedThemeSignal.set(theme);
   }
 
   setLoadedFlag(value: boolean): void {

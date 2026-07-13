@@ -1,14 +1,17 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   inject,
   input,
+  NgZone,
   output,
   untracked,
 } from '@angular/core';
 import { GeoJSONSource, MapMouseEvent } from 'maplibre-gl';
 import { MapContextService } from '../../services/map-context.service';
+import { nextId } from '../../utils/map-utils';
 
 @Component({
   selector: 'ng-map-route',
@@ -17,6 +20,8 @@ import { MapContextService } from '../../services/map-context.service';
 })
 export class MapRouteComponent {
   readonly coordinates = input.required<[number, number][]>();
+  /** Optional unique identifier prefix for the source/layer. Auto-generated if not provided. */
+  readonly id = input<string | undefined>(undefined);
   readonly color = input('#4285F4');
   readonly width = input(3);
   readonly opacity = input(0.8);
@@ -26,9 +31,11 @@ export class MapRouteComponent {
   readonly routeClick = output<MapMouseEvent>();
 
   private readonly ctx = inject(MapContextService);
+  private readonly zone = inject(NgZone);
 
-  private readonly sourceId = `ng-route-${Math.random().toString(36).slice(2, 9)}`;
-  private readonly layerId = `${this.sourceId}-layer`;
+  private readonly autoId = nextId('ng-route');
+  private readonly sourceId = computed(() => this.id() ?? this.autoId);
+  private readonly layerId = computed(() => `${this.sourceId()}-layer`);
 
   constructor() {
     // Add source + layer once the map style is loaded
@@ -43,16 +50,18 @@ export class MapRouteComponent {
       const opacity = untracked(() => this.opacity());
       const da = untracked(() => this.dashArray());
       const interactive = untracked(() => this.interactive());
+      const sourceId = untracked(() => this.sourceId());
+      const layerId = untracked(() => this.layerId());
 
-      map.addSource(this.sourceId, {
+      map.addSource(sourceId, {
         type: 'geojson',
         data: this.toGeoJSON(coords),
       });
 
       map.addLayer({
-        id: this.layerId,
+        id: layerId,
         type: 'line',
-        source: this.sourceId,
+        source: sourceId,
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: {
           'line-color': color,
@@ -62,22 +71,31 @@ export class MapRouteComponent {
         },
       });
 
+      // Map events fire outside the zone (map is created there) — re-enter for outputs
+      const handleClick = (e: MapMouseEvent) => this.zone.run(() => this.routeClick.emit(e));
+      const handleMouseEnter = () => {
+        map.getCanvas().style.cursor = 'pointer';
+      };
+      const handleMouseLeave = () => {
+        map.getCanvas().style.cursor = '';
+      };
       if (interactive) {
-        map.on('click', this.layerId, (e) => this.routeClick.emit(e));
-        map.on('mouseenter', this.layerId, () => {
-          map.getCanvas().style.cursor = 'pointer';
-        });
-        map.on('mouseleave', this.layerId, () => {
-          map.getCanvas().style.cursor = '';
-        });
+        map.on('click', layerId, handleClick);
+        map.on('mouseenter', layerId, handleMouseEnter);
+        map.on('mouseleave', layerId, handleMouseLeave);
       }
 
       onCleanup(() => {
+        if (interactive) {
+          map.off('click', layerId, handleClick);
+          map.off('mouseenter', layerId, handleMouseEnter);
+          map.off('mouseleave', layerId, handleMouseLeave);
+        }
         try {
-          if (map.getLayer(this.layerId)) map.removeLayer(this.layerId);
+          if (map.getLayer(layerId)) map.removeLayer(layerId);
         } catch {}
         try {
-          if (map.getSource(this.sourceId)) map.removeSource(this.sourceId);
+          if (map.getSource(sourceId)) map.removeSource(sourceId);
         } catch {}
       });
     });
@@ -88,7 +106,7 @@ export class MapRouteComponent {
       if (!this.ctx.isLoaded()) return;
       const map = this.ctx.map();
       if (!map) return;
-      const source = map.getSource(this.sourceId) as GeoJSONSource | undefined;
+      const source = map.getSource(this.sourceId()) as GeoJSONSource | undefined;
       if (!source) return;
       source.setData(this.toGeoJSON(coords));
     });
@@ -101,11 +119,13 @@ export class MapRouteComponent {
       const da = this.dashArray();
       if (!this.ctx.isLoaded()) return;
       const map = this.ctx.map();
-      if (!map || !map.getLayer(this.layerId)) return;
-      map.setPaintProperty(this.layerId, 'line-color', color);
-      map.setPaintProperty(this.layerId, 'line-width', width);
-      map.setPaintProperty(this.layerId, 'line-opacity', opacity);
-      if (da) map.setPaintProperty(this.layerId, 'line-dasharray', da);
+      const layerId = this.layerId();
+      if (!map || !map.getLayer(layerId)) return;
+      map.setPaintProperty(layerId, 'line-color', color);
+      map.setPaintProperty(layerId, 'line-width', width);
+      map.setPaintProperty(layerId, 'line-opacity', opacity);
+      // Unconditional (mapcn parity): undefined clears the dash pattern
+      map.setPaintProperty(layerId, 'line-dasharray', da);
     });
   }
 

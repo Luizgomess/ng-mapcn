@@ -37,15 +37,26 @@ export class MarkerContentComponent {
       // Clear MapLibre's default marker content
       host.innerHTML = '';
 
+      const wrapper = document.createElement('div');
+      wrapper.className = 'ng-marker-content';
+      host.appendChild(wrapper);
+
       const view = this.vcr.createEmbeddedView(this.tpl());
       this.view = view;
 
       view.rootNodes.forEach((node: Node) => {
         if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE) {
-          host.appendChild(node);
+          wrapper.appendChild(node);
         }
       });
       view.detectChanges();
+
+      // No projected content -> default marker icon (mapcn's blue dot)
+      if (!wrapper.hasChildNodes() || (wrapper.textContent?.trim() === '' && !wrapper.querySelector('*'))) {
+        const icon = document.createElement('div');
+        icon.className = 'ng-marker-default-icon';
+        wrapper.appendChild(icon);
+      }
 
       onCleanup(() => {
         view.destroy();

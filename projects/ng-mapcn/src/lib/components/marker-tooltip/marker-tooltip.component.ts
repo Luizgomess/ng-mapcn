@@ -6,9 +6,11 @@ import {
   ViewContainerRef,
   effect,
   inject,
+  input,
+  untracked,
   viewChild,
 } from '@angular/core';
-import { Popup } from 'maplibre-gl';
+import { Offset, Popup, PositionAnchor } from 'maplibre-gl';
 import { MapContextService } from '../../services/map-context.service';
 import { MarkerContextService } from '../map-marker/marker-context.service';
 
@@ -18,6 +20,10 @@ import { MarkerContextService } from '../map-marker/marker-context.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MarkerTooltipComponent {
+  readonly offset = input<Offset>(16);
+  /** Applied at creation only — MapLibre's Popup has no anchor setter (mapcn parity). */
+  readonly anchor = input<PositionAnchor | undefined>(undefined);
+
   private readonly vcr = inject(ViewContainerRef);
   private readonly mapCtx = inject(MapContextService);
   private readonly markerCtx = inject(MarkerContextService);
@@ -42,6 +48,8 @@ export class MarkerTooltipComponent {
         closeButton: false,
         closeOnClick: true,
         focusAfterOpen: false,
+        offset: untracked(() => this.offset()),
+        anchor: untracked(() => this.anchor()),
       });
       popup.setDOMContent(container);
 
@@ -56,12 +64,23 @@ export class MarkerTooltipComponent {
       el.addEventListener('mouseenter', show);
       el.addEventListener('mouseleave', hide);
 
+      this.popup = popup;
+
       onCleanup(() => {
         el.removeEventListener('mouseenter', show);
         el.removeEventListener('mouseleave', hide);
         popup.remove();
         view.destroy();
+        this.popup = null;
       });
     });
+
+    // Reconcile offset changes on the live popup (mapcn parity)
+    effect(() => {
+      const offset = this.offset();
+      this.popup?.setOffset(offset ?? 16);
+    });
   }
+
+  private popup: Popup | null = null;
 }

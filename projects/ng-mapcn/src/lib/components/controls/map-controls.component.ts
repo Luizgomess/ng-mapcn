@@ -6,12 +6,14 @@ import {
   effect,
   inject,
   input,
+  output,
+  PLATFORM_ID,
   signal,
   viewChild,
 } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Map as MapLibreMap } from 'maplibre-gl';
 import { MapContextService } from '../../services/map-context.service';
-import { MapService } from '../../services/map.service';
 
 @Component({
   selector: 'ng-map-controls',
@@ -21,17 +23,14 @@ import { MapService } from '../../services/map.service';
   host: { class: 'ng-map-controls-host' },
 })
 export class MapControlsComponent {
-  readonly position = input<'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'>('top-right');
+  readonly position = input<'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'>('bottom-right');
   readonly showZoom = input(true);
   readonly showCompass = input(false);
   readonly showLocate = input(false);
   readonly showFullscreen = input(false);
-  /**
-   * Optional: only needed when the component is placed **outside** <ng-map>.
-   * When placed inside <ng-map>, the map is resolved automatically via
-   * MapContextService (hierarchical DI).
-   */
-  readonly mapId = input<string>('default-map');
+
+  /** Emitted after a successful geolocation (mapcn `onLocate`). */
+  readonly locateChange = output<{ longitude: number; latitude: number }>();
 
   protected readonly compassSvg = viewChild<ElementRef<SVGElement>>('compassSvg');
   protected readonly locating = signal(false);
@@ -44,20 +43,14 @@ export class MapControlsComponent {
       'bottom-left': 'ng-controls--bottom-left',
       'bottom-right': 'ng-controls--bottom-right',
     };
-    return map[this.position()] ?? 'ng-controls--top-right';
+    return map[this.position()] ?? 'ng-controls--bottom-right';
   });
 
-  // Hierarchical DI — only available when placed inside <ng-map>
-  private readonly ctx = inject(MapContextService, { optional: true });
-  // Global registry — fallback for legacy usage outside <ng-map>
-  private readonly mapService = inject(MapService);
+  // Hierarchical DI — throws when placed outside <ng-map>, like mapcn's useMap()
+  private readonly ctx = inject(MapContextService);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
-  /** Resolves the MapLibre instance from context or MapService fallback */
-  private readonly resolvedMap = computed<MapLibreMap | null>(() => {
-    const ctxMap = this.ctx?.map() ?? null;
-    if (ctxMap) return ctxMap;
-    return this.mapService.getMapSignal(this.mapId())() ?? null;
-  });
+  private readonly resolvedMap = computed<MapLibreMap | null>(() => this.ctx.map());
 
   private rotateHandler?: () => void;
   private pitchHandler?: () => void;
@@ -76,9 +69,11 @@ export class MapControlsComponent {
         this.syncCompass(map);
       }
 
-      this.fullscreenHandler = () =>
-        this.isFullscreen.set(!!document.fullscreenElement);
-      document.addEventListener('fullscreenchange', this.fullscreenHandler);
+      if (this.isBrowser) {
+        this.fullscreenHandler = () =>
+          this.isFullscreen.set(!!document.fullscreenElement);
+        document.addEventListener('fullscreenchange', this.fullscreenHandler);
+      }
 
       onCleanup(() => {
         if (this.rotateHandler) map.off('rotate', this.rotateHandler);
@@ -113,8 +108,9 @@ export class MapControlsComponent {
         map.flyTo({
           center: [coords.longitude, coords.latitude],
           zoom: 14,
-          duration: 1000,
+          duration: 1500,
         });
+        this.locateChange.emit({ longitude: coords.longitude, latitude: coords.latitude });
         this.locating.set(false);
       },
       () => this.locating.set(false),

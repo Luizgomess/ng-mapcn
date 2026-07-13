@@ -6,6 +6,7 @@ import {
   ViewContainerRef,
   effect,
   inject,
+  NgZone,
   output,
   viewChild,
 } from '@angular/core';
@@ -23,6 +24,7 @@ export class MarkerPopupComponent {
 
   private readonly vcr = inject(ViewContainerRef);
   private readonly markerCtx = inject(MarkerContextService);
+  private readonly zone = inject(NgZone);
   private readonly tpl = viewChild.required<TemplateRef<unknown>>('tpl');
 
   constructor() {
@@ -44,7 +46,8 @@ export class MarkerPopupComponent {
         focusAfterOpen: true,
       });
       popup.setDOMContent(container);
-      popup.on('close', () => this.popupClose.emit());
+      // 'close' fires from the map's event system (outside the zone) — re-enter
+      popup.on('close', () => this.zone.run(() => this.popupClose.emit()));
       marker.setPopup(popup);
 
       onCleanup(() => {

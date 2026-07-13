@@ -1,15 +1,17 @@
-import { DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { DestroyRef, inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ThemeService {
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly themeSignal = signal<'light' | 'dark'>(this.detect());
 
   readonly theme = this.themeSignal.asReadonly();
 
   constructor() {
-    if (typeof document === 'undefined') return;
+    if (!this.isBrowser) return;
 
     const observer = new MutationObserver(() =>
       this.themeSignal.set(this.detect())
@@ -19,16 +21,21 @@ export class ThemeService {
       attributeFilter: ['class'],
     });
 
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      mq.addEventListener('change', () => this.themeSignal.set(this.detect()));
+    let mq: MediaQueryList | null = null;
+    const onSchemeChange = () => this.themeSignal.set(this.detect());
+    if (window.matchMedia) {
+      mq = window.matchMedia('(prefers-color-scheme: dark)');
+      mq.addEventListener('change', onSchemeChange);
     }
 
-    inject(DestroyRef).onDestroy(() => observer.disconnect());
+    inject(DestroyRef).onDestroy(() => {
+      observer.disconnect();
+      mq?.removeEventListener('change', onSchemeChange);
+    });
   }
 
   setTheme(theme: 'light' | 'dark'): void {
-    if (typeof document === 'undefined') return;
+    if (!this.isBrowser) return;
     const html = document.documentElement;
     if (theme === 'dark') {
       html.classList.add('dark');
@@ -49,11 +56,11 @@ export class ThemeService {
   }
 
   private detect(): 'light' | 'dark' {
-    if (typeof document === 'undefined') return 'light';
+    if (!this.isBrowser) return 'light';
     const html = document.documentElement;
     if (html.classList.contains('dark')) return 'dark';
     if (html.classList.contains('light')) return 'light';
-    if (typeof window !== 'undefined' && window.matchMedia) {
+    if (window.matchMedia) {
       return window.matchMedia('(prefers-color-scheme: dark)').matches
         ? 'dark'
         : 'light';

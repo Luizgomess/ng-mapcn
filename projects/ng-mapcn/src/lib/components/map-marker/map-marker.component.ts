@@ -4,10 +4,11 @@ import {
   effect,
   inject,
   input,
+  NgZone,
   output,
   untracked,
 } from '@angular/core';
-import { Marker, PointLike } from 'maplibre-gl';
+import { Marker, MarkerOptions, Point, PointLike } from 'maplibre-gl';
 import { MapContextService } from '../../services/map-context.service';
 import { MarkerContextService } from './marker-context.service';
 
@@ -23,6 +24,10 @@ export class MapMarkerComponent {
   readonly draggable = input(false);
   readonly offset = input<PointLike | undefined>(undefined);
   readonly rotation = input(0);
+  /** Applied at creation only — MapLibre's Marker has no anchor setter (mapcn parity). */
+  readonly anchor = input<MarkerOptions['anchor']>(undefined);
+  readonly rotationAlignment = input<MarkerOptions['rotationAlignment']>('auto');
+  readonly pitchAlignment = input<MarkerOptions['pitchAlignment']>('auto');
 
   readonly markerClick = output<MouseEvent>();
   readonly markerMouseEnter = output<MouseEvent>();
@@ -33,6 +38,7 @@ export class MapMarkerComponent {
 
   private readonly mapCtx = inject(MapContextService);
   private readonly markerCtx = inject(MarkerContextService);
+  private readonly zone = inject(NgZone);
 
   constructor() {
     // Create marker when the map becomes available
@@ -47,27 +53,50 @@ export class MapMarkerComponent {
       const draggable = untracked(() => this.draggable());
       const offset = untracked(() => this.offset());
       const rotation = untracked(() => this.rotation());
+      const anchor = untracked(() => this.anchor());
+      const rotationAlignment = untracked(() => this.rotationAlignment());
+      const pitchAlignment = untracked(() => this.pitchAlignment());
 
       const el = document.createElement('div');
-      const marker = new Marker({ element: el, draggable, offset, rotation })
-        .setLngLat([lng, lat])
-        .addTo(map);
+      // Creation and listener registration outside the zone; low-frequency
+      // events re-enter via zone.run, `drag` (per-frame) stays outside.
+      const marker = this.zone.runOutsideAngular(() => {
+        const m = new Marker({
+          element: el,
+          draggable,
+          offset,
+          rotation,
+          ...(anchor ? { anchor } : {}),
+          rotationAlignment,
+          pitchAlignment,
+        })
+          .setLngLat([lng, lat])
+          .addTo(map);
 
-      el.addEventListener('click', (e) => this.markerClick.emit(e as MouseEvent));
-      el.addEventListener('mouseenter', (e) => this.markerMouseEnter.emit(e as MouseEvent));
-      el.addEventListener('mouseleave', (e) => this.markerMouseLeave.emit(e as MouseEvent));
+        el.addEventListener('click', (e) =>
+          this.zone.run(() => this.markerClick.emit(e as MouseEvent))
+        );
+        el.addEventListener('mouseenter', (e) =>
+          this.zone.run(() => this.markerMouseEnter.emit(e as MouseEvent))
+        );
+        el.addEventListener('mouseleave', (e) =>
+          this.zone.run(() => this.markerMouseLeave.emit(e as MouseEvent))
+        );
 
-      marker.on('dragstart', () => {
-        const ll = marker.getLngLat();
-        this.dragStart.emit({ lng: ll.lng, lat: ll.lat });
-      });
-      marker.on('drag', () => {
-        const ll = marker.getLngLat();
-        this.drag.emit({ lng: ll.lng, lat: ll.lat });
-      });
-      marker.on('dragend', () => {
-        const ll = marker.getLngLat();
-        this.dragEnd.emit({ lng: ll.lng, lat: ll.lat });
+        m.on('dragstart', () => {
+          const ll = m.getLngLat();
+          this.zone.run(() => this.dragStart.emit({ lng: ll.lng, lat: ll.lat }));
+        });
+        m.on('drag', () => {
+          const ll = m.getLngLat();
+          this.drag.emit({ lng: ll.lng, lat: ll.lat });
+        });
+        m.on('dragend', () => {
+          const ll = m.getLngLat();
+          this.zone.run(() => this.dragEnd.emit({ lng: ll.lng, lat: ll.lat }));
+        });
+
+        return m;
       });
 
       this.markerCtx.setMarker(marker);
@@ -78,16 +107,34 @@ export class MapMarkerComponent {
       });
     });
 
-    // Reconcile position/rotation changes without recreating the marker
+    // Reconcile prop changes without recreating the marker (field-by-field diff)
     effect(() => {
+      const lng = this.longitude();
+      const lat = this.latitude();
+      const draggable = this.draggable();
+      const rotation = this.rotation() ?? 0;
+      const rotationAlignment = this.rotationAlignment() ?? 'auto';
+      const pitchAlignment = this.pitchAlignment() ?? 'auto';
+      const off = this.offset();
       const marker = this.markerCtx.marker();
       if (!marker) return;
 
-      marker.setLngLat([this.longitude(), this.latitude()]);
-      marker.setDraggable(this.draggable());
-      marker.setRotation(this.rotation());
-      const off = this.offset();
-      if (off != null) marker.setOffset(off);
+      const current = marker.getLngLat();
+      if (current.lng !== lng || current.lat !== lat) marker.setLngLat([lng, lat]);
+      if (marker.isDraggable() !== draggable) marker.setDraggable(draggable);
+      if (marker.getRotation() !== rotation) marker.setRotation(rotation);
+      if (marker.getRotationAlignment() !== rotationAlignment) {
+        marker.setRotationAlignment(rotationAlignment);
+      }
+      if (marker.getPitchAlignment() !== pitchAlignment) {
+        marker.setPitchAlignment(pitchAlignment);
+      }
+      // mapcn parity: undefined resets to [0, 0]; diff x/y to avoid no-op sets
+      const targetOffset = Point.convert(off ?? [0, 0]);
+      const currentOffset = marker.getOffset();
+      if (currentOffset.x !== targetOffset.x || currentOffset.y !== targetOffset.y) {
+        marker.setOffset(targetOffset);
+      }
     });
   }
 
