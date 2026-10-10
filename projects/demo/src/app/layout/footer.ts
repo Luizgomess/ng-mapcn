@@ -100,6 +100,7 @@ export class FooterComponent {
       links: [
         { label: 'Documentation', href: '/docs' },
         { label: 'Components', href: '/docs/components/map' },
+        { label: 'Blocks', href: '/blocks' },
         { label: 'Credits', href: '/credits' },
       ],
     },

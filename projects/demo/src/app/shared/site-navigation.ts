@@ -46,6 +46,7 @@ const pageItems: SiteNavigationItem[] = [
   { title: 'Home', href: '/', icon: 'lucideCornerDownRight' },
   { title: 'Docs', href: '/docs', icon: 'lucideCornerDownRight' },
   { title: 'Components', href: '/docs/components/map', icon: 'lucideCornerDownRight' },
+  { title: 'Blocks', href: '/blocks', icon: 'lucideCornerDownRight' },
 ];
 
 export const siteNavigation: SiteNavigationGroup[] = [

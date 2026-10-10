@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { computed, effect, inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
+import { computed, DestroyRef, effect, inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
 import type { StyleSpecification } from 'maplibre-gl';
 // Type-only: a value import would pull the whole ng-mapcn FESM (and with it
 // maplibre-gl) into the initial bundle, since this service is root-provided.
@@ -134,6 +134,18 @@ export class BasemapService {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       } catch {}
     });
+
+    if (!this.isBrowser) return;
+    // Follow picks made in other windows — the blocks gallery previews are
+    // iframes, and they should switch basemap with the page around them.
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== STORAGE_KEY) return;
+      const state = this.restore();
+      this.providerId.set(state.providerId);
+      this.keys.set(state.keys);
+    };
+    window.addEventListener('storage', onStorage);
+    inject(DestroyRef).onDestroy(() => window.removeEventListener('storage', onStorage));
   }
 
   select(id: BasemapId): void {

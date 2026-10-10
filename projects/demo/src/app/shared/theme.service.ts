@@ -1,47 +1,41 @@
 import { isPlatformBrowser } from '@angular/common';
-import { DestroyRef, inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
+import { DestroyRef, DOCUMENT, effect, inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { EDarkModes, ZardDarkMode } from '@/shared/services/dark-mode';
 
-/** localStorage key shared with the pre-paint script in `index.html`. */
+/** localStorage key shared with ZardDarkMode and the pre-paint script in `index.html`. */
 const STORAGE_KEY = 'theme';
 
 /**
- * Site theme toggle. Deliberately a demo-local copy of the library's
- * ThemeService: importing anything from `ng-mapcn` in the app shell drags
- * maplibre-gl (CommonJS, not tree-shakeable) into the initial bundle.
+ * Site theme, on top of zard/ui's `ZardDarkMode` (the source of truth — zard
+ * charts read it). This facade adds what the site needs on top:
  *
- * The library's own ThemeService watches the same `dark`/`light` class on
- * <html>, so the maps still follow this toggle — it just loads with the map
- * chunk instead of the shell.
+ * - the `light` class next to `dark`: the ng-mapcn library resolves the map
+ *   theme from those classes, and without `light` it would fall back to the
+ *   OS scheme;
+ * - the `t` hotkey (mapcn parity);
+ * - cross-window sync, so block previews (iframes) follow the parent page.
  *
- * Mirrors mapcn's next-themes setup: follows the system scheme until the user
- * picks one (persisted), and the `t` key toggles it.
+ * Deliberately demo-local: importing anything from `ng-mapcn` in the app shell
+ * drags maplibre-gl into the initial bundle.
  */
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
+  private readonly darkMode = inject(ZardDarkMode);
+  private readonly document = inject(DOCUMENT);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
-  private readonly themeSignal = signal<'light' | 'dark'>(this.detect());
 
-  readonly theme = this.themeSignal.asReadonly();
+  /** Resolved theme: `light` or `dark`. */
+  readonly theme = this.darkMode.themeMode;
 
   constructor() {
     if (!this.isBrowser) return;
 
-    const observer = new MutationObserver(() => this.themeSignal.set(this.detect()));
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
+    effect(() => {
+      const theme = this.theme();
+      const html = this.document.documentElement;
+      html.classList.toggle('light', theme === EDarkModes.LIGHT);
+      html.style.colorScheme = theme;
     });
-
-    // Follow the OS scheme only while the user has not picked a theme.
-    let mq: MediaQueryList | null = null;
-    const onSchemeChange = (event: MediaQueryListEvent) => {
-      if (this.stored()) return;
-      this.apply(event.matches ? 'dark' : 'light');
-    };
-    if (window.matchMedia) {
-      mq = window.matchMedia('(prefers-color-scheme: dark)');
-      mq.addEventListener('change', onSchemeChange);
-    }
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.repeat) return;
@@ -49,53 +43,28 @@ export class ThemeService {
       if (event.key.toLowerCase() !== 't' || isTypingTarget(event.target)) return;
       this.toggleTheme();
     };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== STORAGE_KEY) return;
+      const value = event.newValue;
+      if (value === EDarkModes.LIGHT || value === EDarkModes.DARK || value === EDarkModes.SYSTEM) {
+        this.darkMode.toggleTheme(value);
+      }
+    };
     window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('storage', onStorage);
 
     inject(DestroyRef).onDestroy(() => {
-      observer.disconnect();
-      mq?.removeEventListener('change', onSchemeChange);
       window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('storage', onStorage);
     });
   }
 
   setTheme(theme: 'light' | 'dark'): void {
-    if (!this.isBrowser) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, theme);
-    } catch {}
-    this.apply(theme);
+    this.darkMode.toggleTheme(theme === 'dark' ? EDarkModes.DARK : EDarkModes.LIGHT);
   }
 
   toggleTheme(): void {
     this.setTheme(this.theme() === 'dark' ? 'light' : 'dark');
-  }
-
-  private apply(theme: 'light' | 'dark'): void {
-    const html = document.documentElement;
-    html.classList.toggle('dark', theme === 'dark');
-    html.classList.toggle('light', theme === 'light');
-    html.style.colorScheme = theme;
-    // MutationObserver picks up the class change
-  }
-
-  private stored(): 'light' | 'dark' | null {
-    try {
-      const value = localStorage.getItem(STORAGE_KEY);
-      return value === 'light' || value === 'dark' ? value : null;
-    } catch {
-      return null;
-    }
-  }
-
-  private detect(): 'light' | 'dark' {
-    if (!this.isBrowser) return 'light';
-    const html = document.documentElement;
-    if (html.classList.contains('dark')) return 'dark';
-    if (html.classList.contains('light')) return 'light';
-    if (window.matchMedia) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    return 'light';
   }
 }
 
