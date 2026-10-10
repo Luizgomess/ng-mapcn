@@ -26,6 +26,8 @@ import { ThemeToggleComponent } from './theme-toggle';
     ThemeToggleComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // contents: the sticky <header> must sit directly in the page column.
+  host: { class: 'contents' },
   template: `
     <header
       class="bg-background/85 supports-backdrop-filter:bg-background/70 sticky top-0 z-50 h-14 w-full backdrop-blur"
