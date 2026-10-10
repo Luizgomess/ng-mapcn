@@ -2,11 +2,13 @@ import { provideHttpClient, withXhr } from '@angular/common/http';
 import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
 import {
   Routes,
+  TitleStrategy,
   provideRouter,
   withInMemoryScrolling,
 } from '@angular/router';
 import { provideClientHydration, withEventReplay, withNoIncrementalHydration } from '@angular/platform-browser';
 import { provideZard } from '@/shared/core/provider/providezard';
+import { SiteTitleStrategy } from '@/shared/title-strategy';
 
 // Every route is lazy: nothing here may import `ng-mapcn`, or maplibre-gl
 // (CommonJS, not tree-shakeable) ends up in the initial bundle.
@@ -21,6 +23,7 @@ const routes: Routes = [
   },
   {
     path: 'credits',
+    title: 'Credits',
     loadComponent: () => import('./pages/credits/credits').then((m) => m.CreditsComponent),
   },
   {
@@ -41,5 +44,7 @@ export const appConfig: ApplicationConfig = {
     ),
     provideHttpClient(withXhr()), provideClientHydration(withEventReplay(), withNoIncrementalHydration()),
 
-    provideZard(),],
+    provideZard(),
+    { provide: TitleStrategy, useClass: SiteTitleStrategy },
+  ],
 };
