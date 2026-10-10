@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>ng-mapcn – Beautiful maps, made simple</title>
@@ -8,6 +8,21 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt">
   <link rel="alternate" type="text/plain" href="/llms-full.txt" title="llms-full.txt">
+  <!-- Applies the saved (or system) theme before first paint, like next-themes
+       on mapcn.dev, so there is no light/dark flash. ThemeService owns it after. -->
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('theme');
+        var theme = stored === 'light' || stored === 'dark'
+          ? stored
+          : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        var html = document.documentElement;
+        html.classList.add(theme);
+        html.style.colorScheme = theme;
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>
