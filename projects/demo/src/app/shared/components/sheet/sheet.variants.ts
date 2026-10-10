@@ -56,7 +56,7 @@ export const sheetVariants = cva(
 );
 
 /** Classes of the mask behind a sheet, shared by the declarative form and the service. */
-export const SHEET_BACKDROP_CLASSES = ['bg-black/10', 'supports-backdrop-filter:backdrop-blur-xs'];
+export const SHEET_BACKDROP_CLASSES = ['bg-black/50'];
 
 export const sheetHeaderVariants = cva('flex flex-col gap-0.5 p-4');
 

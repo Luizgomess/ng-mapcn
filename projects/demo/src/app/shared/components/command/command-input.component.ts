@@ -16,22 +16,17 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideSearch } from '@ng-icons/lucide';
 
 import { ZardCommand } from '@/shared/components/command/command.tokens';
-import { ZardInputComponent } from '@/shared/components/input/input.component';
-import { ZardInputGroupImports } from '@/shared/components/input-group/input-group.imports';
 
 @Component({
   selector: 'z-command-input',
-  imports: [NgIcon, ZardInputComponent, ...ZardInputGroupImports],
+  imports: [NgIcon],
+  // shadcn/ui new-york CommandInput: a bare input on a bottom border.
   template: `
-    <div data-slot="command-input-wrapper" class="p-1 pb-0">
-      <z-input-group
-        class="border-input/30 has-[input:focus-visible]:border-input/30! shadow-none! has-[input:focus-visible]:ring-0!"
-      >
-        <z-input-group-addon>
-          <ng-icon name="lucideSearch" class="size-4! shrink-0 opacity-50" />
-        </z-input-group-addon>
-        <input
-          z-input
+    <div data-slot="command-input-wrapper" class="flex h-9 items-center gap-2 border-b px-3">
+      <ng-icon name="lucideSearch" class="size-4! shrink-0 opacity-50" />
+      <input
+          data-slot="command-input"
+          class="placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
           #searchInput
           [placeholder]="placeholder()"
           [value]="searchTerm()"
@@ -49,7 +44,6 @@ import { ZardInputGroupImports } from '@/shared/components/input-group/input-gro
           role="combobox"
           [attr.aria-expanded]="true"
         />
-      </z-input-group>
     </div>
   `,
   providers: [
@@ -66,7 +60,6 @@ import { ZardInputGroupImports } from '@/shared/components/input-group/input-gro
 })
 export class ZardCommandInputComponent implements ControlValueAccessor {
   private readonly commandComponent = inject(ZardCommand, { optional: true });
-  // `#searchInput` sits on an `input[z-input]` component, so read the element explicitly.
   readonly searchInput = viewChild<unknown, ElementRef<HTMLInputElement>>('searchInput', { read: ElementRef });
 
   readonly placeholder = input<string>('Type a command or search...');

@@ -57,17 +57,18 @@ import { siteNavigation } from '@/shared/site-navigation';
     <z-dialog
       [(zVisible)]="open"
       [zClosable]="false"
-      class="gap-0 overflow-hidden p-0 sm:max-w-lg"
+      class="top-[min(22vh,10rem)] translate-y-0 gap-0 overflow-hidden p-0"
     >
       <z-dialog-title class="sr-only">Search...</z-dialog-title>
       <z-dialog-description class="sr-only">Jump to pages, components, and docs</z-dialog-description>
+      <!-- shadcn CommandDialog sizing: taller input and items, 20px icons. -->
       <z-command
         #command="zCommand"
-        class="rounded-none border-0 shadow-none"
+        class="**:data-[slot=command-input-wrapper]:h-12 **:data-[slot=command-input]:h-12 **:data-[slot=command-group]:px-2 **:data-[slot=command-group-heading]:px-2 **:data-[slot=command-group-heading]:font-medium **:data-[slot=command-item]:px-2 **:data-[slot=command-item]:py-3 [&_[data-slot=command-input-wrapper]_ng-icon]:text-xl [&_[data-slot=command-item]_ng-icon]:text-xl"
         (zCommandSelected)="select($event)"
       >
         <z-command-input placeholder="Search..." />
-        <z-command-list class="max-h-[300px]">
+        <z-command-list>
           @if (command.isEmpty()) {
             <div class="text-muted-foreground flex flex-col items-center gap-1.5 py-8 text-sm">
               <ng-icon name="lucideFileText" size="20" class="opacity-40" />
