@@ -8,6 +8,8 @@ export interface SiteNavigationItem {
   href: string;
   /** lucide icon registered by the consumer (command search). */
   icon: 'lucideBookOpen' | 'lucideLayers2' | 'lucideCornerDownRight';
+  /** Static file served from `public/` (opened in a new tab, not routed). */
+  file?: boolean;
 }
 
 export interface SiteNavigationGroup {
@@ -21,7 +23,7 @@ export const docsNavigation: SiteNavigationGroup[] = [
     items: [
       { title: 'Getting Started', href: '/docs', icon: 'lucideBookOpen' },
       { title: 'Installation', href: '/docs/installation', icon: 'lucideBookOpen' },
-      { title: 'llms.txt', href: '/docs/llms-txt', icon: 'lucideBookOpen' },
+      { title: 'llms.txt', href: '/llms.txt', icon: 'lucideBookOpen', file: true },
       { title: 'API Reference', href: '/docs/api-reference', icon: 'lucideBookOpen' },
       { title: 'Map Styles', href: '/docs/basemaps', icon: 'lucideBookOpen' },
     ],
@@ -58,7 +60,7 @@ export const siteNavigation: SiteNavigationGroup[] = [
 export const mainNavItems = pageItems.filter((item) => item.title !== 'Home');
 
 /** Flat docs order, used for the prev/next links at the bottom of each page. */
-const docsOrder = docsNavigation.flatMap((group) => group.items);
+const docsOrder = docsNavigation.flatMap((group) => group.items).filter((item) => !item.file);
 
 export function docsNeighbours(href: string): {
   prev?: SiteNavigationItem;

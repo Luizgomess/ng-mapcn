@@ -109,6 +109,9 @@ export class CommandSearchComponent {
 
   protected readonly open = signal(false);
   protected readonly groups = siteNavigation;
+  private readonly files = new Set(
+    siteNavigation.flatMap((group) => group.items).filter((item) => item.file).map((item) => item.href),
+  );
 
   protected onKeydown(event: KeyboardEvent): void {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -119,6 +122,11 @@ export class CommandSearchComponent {
 
   protected select(option: ZardCommandOption): void {
     this.open.set(false);
-    void this.router.navigateByUrl(String(option.value));
+    const href = String(option.value);
+    if (this.files.has(href)) {
+      window.open(href, '_blank');
+      return;
+    }
+    void this.router.navigateByUrl(href);
   }
 }

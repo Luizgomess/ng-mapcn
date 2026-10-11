@@ -43,11 +43,20 @@ import { LogoComponent } from './logo';
               <ul>
                 @for (item of group.items; track item.href) {
                   <li>
-                    <a
-                      [routerLink]="item.href"
-                      class="active:text-muted-foreground flex items-center px-3 py-2 text-lg"
-                      >{{ item.title }}</a
-                    >
+                    @if (item.file) {
+                      <a
+                        [href]="item.href"
+                        target="_blank"
+                        class="active:text-muted-foreground flex items-center px-3 py-2 text-lg"
+                        >{{ item.title }}</a
+                      >
+                    } @else {
+                      <a
+                        [routerLink]="item.href"
+                        class="active:text-muted-foreground flex items-center px-3 py-2 text-lg"
+                        >{{ item.title }}</a
+                      >
+                    }
                   </li>
                 }
               </ul>

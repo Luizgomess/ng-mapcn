@@ -34,11 +34,6 @@ export const DOCS_ROUTES: Routes = [
           import('./components/basemaps-page').then((m) => m.BasemapsPageComponent),
       },
       {
-        path: 'llms-txt',
-        title: 'llms.txt',
-        loadComponent: () => import('./llms-txt').then((m) => m.LlmsTxtComponent),
-      },
-      {
         path: 'components/map',
         title: 'Map',
         loadComponent: () =>
