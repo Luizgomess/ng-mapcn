@@ -16,6 +16,8 @@ export const BLOCK_VIEW_ROUTES: Routes = [
   {
     path: ':name',
     title: blockTitle,
+    // Bare previews (iframes): the gallery is the page to index.
+    data: { seo: { noindex: true, canonical: '/blocks', description: 'ng-mapcn block preview.' } },
     providers: [...basemapProviders, provideZardCharts()],
     loadComponent: () => import('./block-view').then((m) => m.BlockViewComponent),
   },

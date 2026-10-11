@@ -36,11 +36,25 @@ const routes: Routes = [
       {
         path: 'blocks',
         title: 'Map Blocks',
+        data: {
+          seo: {
+            title: 'Angular Map Blocks and Templates',
+            description:
+              'Ready-made Angular map blocks built with ng-mapcn and zard/ui: analytics dashboards, choropleths, heatmaps, store locators, delivery trackers and more. Copy and paste.',
+            keywords: ['Angular map templates', 'map dashboard Angular', 'store locator Angular', 'choropleth map'],
+          },
+        },
         loadChildren: () => import('./pages/blocks/blocks.routes').then((m) => m.BLOCKS_ROUTES),
       },
       {
         path: 'credits',
         title: 'Credits',
+        data: {
+          seo: {
+            description:
+              'The open-source projects ng-mapcn is built on: mapcn, MapLibre GL, zard/ui, Tailwind CSS and the basemap providers that make beautiful Angular maps possible.',
+          },
+        },
         loadComponent: () => import('./pages/credits/credits').then((m) => m.CreditsComponent),
       },
     ],

@@ -2,8 +2,7 @@ import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideCheck, lucideCopy } from '@ng-icons/lucide';
 import { ZardButtonComponent } from '@/shared/components/button';
-
-const SITE_URL = 'https://ng-mapcn.vercel.app';
+import { SITE_URL } from '@/shared/seo/site';
 
 /** Prompt an AI coding agent can follow to install ng-mapcn (mapcn `mapInstallAgentPrompt`). */
 export const MAP_INSTALL_AGENT_PROMPT = `Read the ng-mapcn agent instructions at ${SITE_URL}/llms.txt, then install ng-mapcn in this Angular project. Run ng add ng-mapcn, which copies the map components into the app, installs maplibre-gl and registers its CSS. Then add a basic example that imports MapComponent and MapControlsComponent and renders <ng-map> with <ng-map-controls /> inside a sized container. Use the default tiled basemap for maps that need streets, labels, or geographic context. If the user wants a blank/data-only map, such as countries or country borders, use <ng-map [blank]="true"> with <ng-map-geojson> and either a user-provided GeoJSON URL/object or a world countries GeoJSON source. Preserve the existing Tailwind CSS setup. If ng add fails, install it as a package instead with npm install ng-mapcn maplibre-gl and follow ${SITE_URL}/llms-full.txt.`;

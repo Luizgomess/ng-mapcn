@@ -53,7 +53,12 @@ import { TrailExampleComponent } from './examples/trail-example';
 
     <!-- Each example boots its own WebGL map. Deferring on viewport keeps the
          maplibre-gl chunk (and six map instances) out of the initial load. -->
-    <section class="animate-fade-up animate-stagger container-wide" style="--stagger: 4.5">
+    <section
+      class="animate-fade-up animate-stagger container-wide"
+      style="--stagger: 4.5"
+      aria-labelledby="examples-heading"
+    >
+      <h2 id="examples-heading" class="sr-only">Angular map examples built with ng-mapcn</h2>
       <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         @defer (on viewport) {
           <app-analytics-example />
