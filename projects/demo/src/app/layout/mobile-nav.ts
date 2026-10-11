@@ -73,7 +73,7 @@ import { BasemapPickerCompactComponent } from './basemap-picker-compact';
         <nav class="flex flex-col gap-12 px-6 py-6">
           <div class="flex flex-col gap-4">
             <div class="text-muted-foreground text-sm font-medium">Map style</div>
-            <app-basemap-picker-compact />
+            <app-basemap-picker-compact (picked)="open.set(false)" />
           </div>
 
           @for (group of groups; track group.title) {
