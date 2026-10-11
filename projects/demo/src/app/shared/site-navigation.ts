@@ -70,4 +70,3 @@ export function docsNeighbours(href: string): {
 }
 
 export const GITHUB_URL = 'https://github.com/juanvieiraprado99/ng-mapcn';
-export const GITHUB_REPO_API = 'https://api.github.com/repos/juanvieiraprado99/ng-mapcn';

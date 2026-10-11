@@ -1,19 +1,12 @@
-import { afterNextRender, ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ZardButtonComponent } from '@/shared/components/button';
-import { ZardSkeletonComponent } from '@/shared/components/skeleton';
-import { GITHUB_REPO_API, GITHUB_URL } from '@/shared/site-navigation';
+import { GITHUB_URL } from '@/shared/site-navigation';
 
-const CACHE_KEY = 'ng-mapcn-demo:stars';
-
-/**
- * mapcn `GitHubButton`: repo link with the live star count. mapcn fetches on
- * the server with ISR; here the count is fetched once per session in the
- * browser (the prerendered HTML ships the skeleton).
- */
+/** Icon-only link to the GitHub repository (no star count fetch). */
 @Component({
   selector: 'app-github-button',
   standalone: true,
-  imports: [ZardButtonComponent, ZardSkeletonComponent],
+  imports: [ZardButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a
@@ -33,49 +26,9 @@ const CACHE_KEY = 'ng-mapcn-demo:stars';
           transform="scale(64)"
         />
       </svg>
-      @if (withCount()) {
-        @if (stars(); as count) {
-          <span class="text-muted-foreground pt-0.5 text-xs tabular-nums">{{ count }}</span>
-        } @else if (loading()) {
-          <z-skeleton class="block h-4 w-6 rounded" />
-        }
-      }
     </a>
   `,
 })
 export class GithubButtonComponent {
-  readonly withCount = input(true);
-
   protected readonly url = GITHUB_URL;
-  protected readonly stars = signal<string | null>(null);
-  protected readonly loading = signal(true);
-
-  constructor() {
-    afterNextRender(() => {
-      if (!this.withCount()) return;
-      void this.loadStars();
-    });
-  }
-
-  private async loadStars(): Promise<void> {
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      if (cached !== null) {
-        this.stars.set(cached || null);
-        return;
-      }
-      const response = await fetch(GITHUB_REPO_API);
-      if (!response.ok) throw new Error(String(response.status));
-      const data = (await response.json()) as { stargazers_count?: number };
-      const count = data.stargazers_count ?? 0;
-      const formatted = count >= 1000 ? `${(count / 1000).toFixed(1)}k` : String(count);
-      this.stars.set(formatted);
-      sessionStorage.setItem(CACHE_KEY, formatted);
-    } catch {
-      // Rate-limited or offline: just show the icon.
-      this.stars.set(null);
-    } finally {
-      this.loading.set(false);
-    }
-  }
 }
