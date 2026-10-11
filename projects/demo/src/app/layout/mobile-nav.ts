@@ -16,6 +16,7 @@ import {
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter } from 'rxjs';
 import { siteNavigation } from '@/shared/site-navigation';
+import { BasemapPickerCompactComponent } from './basemap-picker-compact';
 
 /**
  * zard/ui docs `MobileNav`: a "Menu" toggle whose bars morph into an X, opening
@@ -29,7 +30,7 @@ import { siteNavigation } from '@/shared/site-navigation';
 @Component({
   selector: 'app-mobile-nav',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, BasemapPickerCompactComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'contents',
@@ -70,6 +71,11 @@ import { siteNavigation } from '@/shared/site-navigation';
         class="bg-background/90 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 fixed inset-x-0 top-14 bottom-0 z-50 overflow-y-auto backdrop-blur duration-100 lg:hidden"
       >
         <nav class="flex flex-col gap-12 px-6 py-6">
+          <div class="flex flex-col gap-4">
+            <div class="text-muted-foreground text-sm font-medium">Map style</div>
+            <app-basemap-picker-compact />
+          </div>
+
           @for (group of groups; track group.title) {
             <div class="flex flex-col gap-4">
               <div class="text-muted-foreground text-sm font-medium">{{ group.title }}</div>
